@@ -1,0 +1,58 @@
+#!/bin/sh
+
+PATH="${PATH}:."
+
+nCONFIG="/sys/class/gpio/gpio67/value"
+CONFIG_DONE="/sys/class/gpio/gpio66/value"
+nSTATUS="/sys/class/gpio/gpio69/value"
+SPI="/dev/spidev1.0"
+CODE="${1:-/usr/lib/spimux_bitrev_pad.rbf}"
+
+ioget() {
+	eval cat \$$1
+}
+
+ioset() {
+	eval "echo $2 >\$$1"
+}
+
+iocheck() {
+	sig=$1
+	value=$2
+	shift
+	shift
+	if [ $(ioget $sig) != $value ]; then
+		echo "ERROR: $sig != $value $@" >&2
+		exit 1
+	fi
+}
+
+# Remove I2C MUX if present
+echo 2-0070 > /sys/bus/i2c/drivers/pca954x/unbind 2>/dev/null
+
+# Configure SPI parameters
+spi-test -OHC -s 5000000 -b 8 -D /dev/spidev1.0 -q 00
+
+# Reset FPGA
+ioset nCONFIG 0
+iocheck CONFIG_DONE 0 when nCONFIG is LOW
+iocheck nSTATUS 0 when nCONFIG is LOW
+
+# Start programming FPGA
+ioset nCONFIG 1
+
+iocheck CONFIG_DONE 0 when nCONFIG is HIGH
+iocheck nSTATUS 1 when nCONFIG is HIGH
+
+dd if=$CODE of=$SPI bs=4K
+
+#sleep 1
+
+iocheck CONFIG_DONE 1 when nCONFIG is HIGH
+
+
+# Enable i2c MUX
+echo 2-0070 > /sys/bus/i2c/drivers_probe
+
+# Configure LCD
+lcd-message --init -l 2 $(basename $CODE .rbf | sed -e 's/_bitrev//' -e 's/_pad//' ) 2>/dev/null
