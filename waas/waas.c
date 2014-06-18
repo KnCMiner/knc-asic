@@ -62,6 +62,8 @@
 #define	DEFAULT_4DCDC_VOUT_TRIM	0xff67
 #define	DEFAULT_8DCDC_VOUT_TRIM	0x0033
 
+#define DEFAULT_NEPTUNE_VOUT_TRIM 0xfed4
+
 #define	MIN_DCDC_VOUT_TRIM	(-200)
 #define	MAX_DCDC_VOUT_TRIM	200
 #define	DCDC_VOUT_TRIM_STEP	10
@@ -76,10 +78,10 @@
 #define	MIN_DIE_FREQ_NEPTUNE		50
 #define	MAX_DIE_FREQ_REVA		775
 #define	MAX_DIE_FREQ_REVB		1200
-#define	MAX_DIE_FREQ_NEPTUNE		750
+#define	MAX_DIE_FREQ_NEPTUNE		500
 #define	DEFAULT_DIE_FREQ_REVA		750
 #define	DEFAULT_DIE_FREQ_REVB		900
-#define	DEFAULT_DIE_FREQ_NEPTUNE	500
+#define	DEFAULT_DIE_FREQ_NEPTUNE	475
 #define	DIE_FREQ_STEP			25
 
 /* Defaults for Auto-PLL parameters */
@@ -492,6 +494,8 @@ static void read_running_settings(struct advanced_config * cfg,
 					data = (num_dcdc <= 4) ?
 					       DEFAULT_4DCDC_VOUT_TRIM :
 					       DEFAULT_8DCDC_VOUT_TRIM;
+				else if (board->neptune)
+					data = DEFAULT_NEPTUNE_VOUT_TRIM;
 				else
 					data = 0;
 			}
@@ -689,8 +693,10 @@ static bool implement_settings(struct advanced_config * cfg,
 		for (dcdc = 0; dcdc < MAX_DCDC_DEVICES; ++dcdc) {
 			die = dcdc / 2;
 			data = cfg->dcdc_V_offset[asic][die];
-			if ((data < start) || (data > end))
-				continue;
+			if (data < start)
+				data = start;
+			if (data > end)
+				data = end;
 			i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
 			if (MFRID_ERICSSON == board_mfrid) {
 				pmbus_set_vout_cmd(i2c_bus, ERICSON_FACTORY_VOUT_VALUE + data, ERICSSON_SAFE_BIG_DELAY);
