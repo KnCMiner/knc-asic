@@ -1192,15 +1192,14 @@ int main(int argc, char *argv[])
 	}
 
 	read_running_settings(&running_settings, &dev, use_defaults);
-	memcpy(&new_settings, &running_settings, sizeof(new_settings));
-	parse_config_res = parse_config_file(config_file_name, &new_settings,
-					     &dev);
-	if ((!read_only) && (!use_defaults) && (0 != parse_config_res))
-		return parse_config_res;
 
 	if (!read_only) {
-		if (use_defaults)
-			memcpy(&new_settings, &running_settings, sizeof(new_settings));
+		memcpy(&new_settings, &running_settings, sizeof(new_settings));
+		if (!use_defaults) {
+			parse_config_res = parse_config_file(config_file_name, &new_settings, &dev);
+			if (0 != parse_config_res)
+				return parse_config_res;
+		}
 		implement_settings(&new_settings, &dev);
 		read_running_settings(&running_settings, &dev, false);
 	}
