@@ -108,13 +108,32 @@ struct advanced_config {
 	int die_freq[MAX_ASICS][DIES_IN_ASIC];
 };
 
+static FILE *fopen_temp_file(char **temp_file_name, const char *mode)
+{
+	FILE *f;
+	int i;
+
+	/* try to create temp file up to 10 times, then give up */
+	for (i = 0; i < 10; ++i) {
+		*temp_file_name = tempnam(NULL, "waas");
+		f = fopen(*temp_file_name, mode);
+		if (NULL != f)
+			return f;
+		free(*temp_file_name);
+	}
+
+	*temp_file_name = NULL;
+	return NULL;
+}
+
 static void detect_device_type(struct device_t *dev, bool write_to_file)
 {
 	int asic;
 	FILE *f = NULL;
+	char *temp_file_name = NULL;
 
 	if (write_to_file) {
-		f = fopen(REVISION_FILE, "w");
+		f = fopen_temp_file(&temp_file_name, "w");
 		if (NULL == f)
 			fprintf(stderr, "Can not open file %s: %m\n", REVISION_FILE);
 	}
@@ -162,6 +181,8 @@ static void detect_device_type(struct device_t *dev, bool write_to_file)
 	if (NULL != f) {
 		fprintf(f, "DEVICE=%s\n", get_str_from_board_type(dev->dev_type, dev->dev_neptune));
 		fclose(f);
+		rename(temp_file_name, REVISION_FILE);
+		free(temp_file_name);
 	}
 }
 
@@ -729,7 +750,8 @@ static void write_expected_performance(struct advanced_config *cfg, struct devic
 {
 	int sum_freq = 0;
 	int asic, die;
-	FILE *f = fopen(EXPECTED_PERFORMANCE_FILE, "w");
+	char *temp_file_name = NULL;
+	FILE *f = fopen_temp_file(&temp_file_name, "w");
 	if (NULL == f)
 		return;
 	for (asic = 0; asic < MAX_ASICS; ++asic) {
@@ -746,6 +768,10 @@ static void write_expected_performance(struct advanced_config *cfg, struct devic
 #ifdef DEBUG_INFO
 	printf("[%lu] EXPECTED_PERF: %u MHs\n", (unsigned long)time(NULL), sum_freq * CORES_IN_DIE);
 #endif /* DEBUG_INFO */
+	/* Atomically move file to the proper position */
+	rename(temp_file_name, EXPECTED_PERFORMANCE_FILE);
+	free(temp_file_name);
+	return;
 }
 
 /* Delays in this restart procedure must be long enough */
