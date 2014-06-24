@@ -642,6 +642,11 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 						cfg->dcdc_V_offset[asic_v][die] = find_offset_from_voltage(mfrid_from_board_type(dev->boards[asic_v].type), vf);
 					}
 				}
+				if (vf <= -500.0) {
+					/* use some reasonable default voltage offset for Neptune */
+					if (dev->boards[asic_v].neptune)
+						cfg->dcdc_V_offset[asic_v][die] = DEFAULT_NEPTUNE_VOUT_TRIM;
+				}
 			} else if (asic_f >= 0) {
 				int asic_fr = -1;
 				sscanf(&chunk.memory[tokens[i].start],
