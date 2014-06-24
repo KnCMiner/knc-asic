@@ -283,6 +283,7 @@ static bool set_die_freq(int asic, int die, int freq)
 	int cur_asic, cur_die;
 	int cur_freq[MAX_ASICS][DIES_IN_ASIC];
 	FILE *f;
+	char *temp_file_name = NULL;
 
 	if ((MAX_ASICS <= asic) || (DIES_IN_ASIC <= die))
 		return false;
@@ -300,7 +301,7 @@ static bool set_die_freq(int asic, int die, int freq)
 		knc_trnsp_free(ctx);
 	}
 
-	f = fopen(WAAS_CURRENT_FREQ, "w");
+	f = fopen_temp_file(&temp_file_name, "w");
 	if (NULL == f)
 		return false;
 
@@ -308,6 +309,9 @@ static bool set_die_freq(int asic, int die, int freq)
 		for (cur_die = 0; cur_die < DIES_IN_ASIC; ++cur_die)
 			fprintf(f, "%i ", cur_freq[cur_asic][cur_die]);
 	fclose(f);
+	/* Atomically move file to the proper position */
+	rename(temp_file_name, WAAS_CURRENT_FREQ);
+	free(temp_file_name);
 	return true;
 }
 
