@@ -308,7 +308,7 @@ static bool set_die_freq(int asic, int die, int freq)
 		for (cur_die = 0; cur_die < DIES_IN_ASIC; ++cur_die)
 			fprintf(f, "%i ", cur_freq[cur_asic][cur_die]);
 	fclose(f);
-	return false;
+	return true;
 }
 
 /* Print out running operating values in JSON format */
