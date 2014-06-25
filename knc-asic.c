@@ -321,7 +321,7 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 	return len;
 }
 
-int knc_verify_response(uint8_t *rxbuf, int len, int response_length)
+int knc_decode_response(uint8_t *rxbuf, int len, uint8_t *response, int response_length)
 {
     int ret = 0;
     if (response_length > 0) {
@@ -332,6 +332,13 @@ int knc_verify_response(uint8_t *rxbuf, int len, int response_length)
 	if (crc != recv_crc)
                 ret |= KNC_ERR_CRC;
     }
+
+    if (response && response_length > 0)
+	memcpy(response, rxbuf + 2 + 4, response_length);
+      
+    if (!len)
+	return 0;
+
     uint8_t ack = rxbuf[len - 4]; /* 2 + MAX(4 + response_length, request_length) + 4; */
 
     if ((ack & KNC_ASIC_ACK_MASK) != KNC_ASIC_ACK_MATCH)
@@ -354,10 +361,7 @@ int knc_syncronous_transfer(void *ctx, int channel, int request_length, const ui
     knc_prepare_transfer(txbuf, 0, len, channel, request_length, request, response_length);
     knc_trnsp_transfer(ctx, txbuf, rxbuf, len);
 
-    if (response_length > 0)
-	memcpy(response, rxbuf + 2 + 4, response_length);
-
-    return knc_verify_response(rxbuf, len, response_length);
+    return knc_decode_response(rxbuf, len, response, response_length);
 }
 
 int knc_decode_info(uint8_t *response, struct knc_die_info *die_info)
