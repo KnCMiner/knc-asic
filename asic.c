@@ -311,7 +311,7 @@ int main(int argc, char **argv)
 	if (argc < 4) {
 		fprintf(stderr, "Usage: %s command arguments..\n", argv[0]);
 		for (cmd = knc_commands; cmd->name; cmd++)
-			fprintf(stderr, "  %s %s\n	%s\n", cmd->name, cmd->args, cmd->description);
+			fprintf(stderr, "  %s channel die %s\n	%s\n", cmd->name, cmd->args, cmd->description);
 		exit(1);
 	}
 
