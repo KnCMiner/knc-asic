@@ -1,5 +1,5 @@
 /*
- * cgminer driver for KnCminer Neptune devices
+ * library for KnCminer devices
  *
  * Copyright 2014 KnCminer
  *
