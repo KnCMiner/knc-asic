@@ -209,17 +209,6 @@ static void do_halt(void *ctx, int channel, int die, UNUSED int argc, char **arg
 	}
 }
 
-static void do_led(void *ctx, UNUSED int channel, UNUSED int die, UNUSED int argc, char **args)
-{
-	uint8_t request[2], response[2];
-	uint32_t red = strtoul(*args++, NULL, 0);
-	uint32_t green = strtoul(*args++, NULL, 0);
-	uint32_t blue = strtoul(*args++, NULL, 0);
-	request[0] = 1 << 4 | red;
-	request[1] = green << 4 | blue;
-	knc_trnsp_transfer(ctx, request, response, 2);
-}
-
 static void do_raw(void *ctx, int channel, int die, UNUSED int argc, char **args)
 {
 	uint8_t response[256];
@@ -297,7 +286,6 @@ struct knc_command {
 	{"report", "core", "Get nonce report", 1, do_report},
 	{"halt", "core", "Halt core", 1, do_halt},
 	{"freq", "frequency", "Set core frequency", 1, do_freq},
-	{"led", "red green blue", "Set I/O board led", 3, do_led},
 	{"raw", "response_length request_data", "Send raw ASIC request", 2, do_raw},
 	{NULL, NULL, NULL, 0, NULL}
 };
