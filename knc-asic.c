@@ -328,7 +328,7 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 }
 
 /* request_length = 0 disables communication checks, i.e. Jupiter protocol */
-int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t *response, int response_length)
+int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, int response_length)
 {
     int ret = 0;
     int len = knc_transfer_length(request_length, response_length);
@@ -341,8 +341,13 @@ int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t *response, i
                 ret |= KNC_ERR_CRC;
     }
 
-    if (response && response_length > 0)
-	memcpy(response, rxbuf + 2 + 4, response_length);
+    if (response) {
+	if (response_length > 0) {
+	    *response = rxbuf + 2 + 4;
+	} else {
+	    *response = NULL;
+	}
+    }
       
     if (response_length == 0)
 	return 0;
@@ -367,7 +372,11 @@ int knc_syncronous_transfer(void *ctx, int channel, int request_length, const ui
     knc_prepare_transfer(txbuf, 0, len, channel, request_length, request, response_length);
     knc_trnsp_transfer(ctx, txbuf, rxbuf, len);
 
-    return knc_decode_response(rxbuf, request_length, response, response_length);
+    uint8_t *response_buf;
+    int rc = knc_decode_response(rxbuf, request_length, &response_buf, response_length);
+    if (response)
+	memcpy(response, response_buf, response_length);
+    return rc;
 }
 
 int knc_decode_info(uint8_t *response, struct knc_die_info *die_info)
