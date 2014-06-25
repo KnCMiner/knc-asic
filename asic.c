@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "knc-asic.h"
 
@@ -318,15 +319,22 @@ int main(int argc, char **argv)
 		args++;
 	}
 	if (argc < 4) {
-		fprintf(stderr, "Usage: %s channel die command arguments..\n", argv[0]);
+		fprintf(stderr, "Usage: %s command arguments..\n", argv[0]);
 		for (cmd = knc_commands; cmd->name; cmd++)
 			fprintf(stderr, "  %s %s\n	%s\n", cmd->name, cmd->args, cmd->description);
 		exit(1);
 	}
 
-	channel = atoi(*args++); argc--;
-	die = atoi(*args++); argc--;
 	command = *args++; argc--;
+	if (isdigit(*command)) {
+		channel = atoi(command);
+	} else {
+		channel = atoi(*args++); argc--;
+	}
+	die = atoi(*args++); argc--;
+	if (isdigit(*command)) {
+		command = *args++; argc--;
+	}
 	argc--;
 
 	for (cmd = knc_commands; cmd->name; cmd++) {
