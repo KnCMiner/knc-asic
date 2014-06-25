@@ -5,12 +5,18 @@
 
 #include "miner.h"
 #include "knc-transport.h"
+#include "logging.h"
 
 int main(int argc, char **argv)
 {
 	void *ctx = knc_trnsp_new(0);
 	char **args = &argv[1];
 	
+	if (argc > 1 && strcmp(*args, "-d") == 0)  {
+		argc--;
+		args++;
+		debug_level = LOG_DEBUG;
+	}
 	if (argc != 4) {
 		fprintf(stderr, "Usage: %s red green blue\n", argv[0]);
 		exit(1);

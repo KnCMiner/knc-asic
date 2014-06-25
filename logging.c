@@ -1,10 +1,15 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include "logging.h"
 
 #define UNUSED __attribute__((unused))
 
-void applog(UNUSED int level, char *fmt, ...)
+int debug_level = LOG_NOTICE;
+
+void applog(int level, char *fmt, ...)
 {
+	if (level > debug_level)
+		return;
 	va_list ap;
 	va_start(ap, fmt);
 	vprintf(fmt, ap);

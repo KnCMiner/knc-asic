@@ -315,6 +315,8 @@ int main(int argc, char **argv)
 			chip_version = KNC_VERSION_NEPTUNE;
 		if (strcmp(*args, "-j") == 0)
 			chip_version = KNC_VERSION_JUPITER;
+		if (strcmp(*args, "-d") == 0)
+			debug_level = LOG_DEBUG;
 		argc--;
 		args++;
 	}
