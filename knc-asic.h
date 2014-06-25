@@ -41,6 +41,8 @@ int knc_prepare_jupiter_setwork(uint8_t *request, int die, int core, int slot, s
 int knc_prepare_jupiter_halt(uint8_t *request, int die, int core);
 int knc_prepare_neptune_halt(uint8_t *request, int die, int core);
 
+int knc_decode_info(uint8_t *response, struct knc_die_info *die_info);
+
 void knc_prepare_neptune_message(int request_length, const uint8_t *request, uint8_t *buffer);
 
 #define KNC_ACCEPTED    (1<<0)
