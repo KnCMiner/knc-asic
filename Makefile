@@ -2,13 +2,15 @@ CFLAGS=-g -O0 -W -Wall -Werror
 
 LDLIBS=-lz
 
-BINARIES = asic knc-serial io-pwr
+BINARIES = asic knc-serial io-pwr knc-led
 
 .PHONY: waas
 
 all: $(BINARIES) waas
 
 asic: knc-asic.o knc-transport-spi.o logging.o
+
+knc-led: knc-transport-spi.o logging.o
 
 io-pwr: i2c.o tps65217.o
 
