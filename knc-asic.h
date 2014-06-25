@@ -4,12 +4,15 @@
 #include <stdint.h>
 #include "miner.h"
 
+#define KNC_MAX_CORES_PER_DIE	360
+
 struct knc_die_info {
 	enum {
 		KNC_VERSION_UNKNOWN = 0,
 		KNC_VERSION_JUPITER,
 		KNC_VERSION_NEPTUNE
 	} version;
+	char want_work[KNC_MAX_CORES_PER_DIE];
 	int cores;
 };
 

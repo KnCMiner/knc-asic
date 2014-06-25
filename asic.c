@@ -23,6 +23,14 @@ static void do_info(void *ctx, int channel, int die, UNUSED int argc, UNUSED cha
 
 	printf("Version: %d\n", die_info.version);
 	printf("Cores: %d\n", die_info.cores);
+	printf("Want work: ");
+	int core;
+	for (core = 0; core < die_info.cores; core++) {
+		putchar(die_info.want_work[core] == 0 ? '.' :
+		        die_info.want_work[core] == 1 ? '*' :
+		        '?');
+	}
+	putchar('\n');
 	chip_version = die_info.version;
 }
 

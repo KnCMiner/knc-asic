@@ -104,9 +104,10 @@
  *
  * cores        16 bits
  * version      16 bits
- * reserved     32 bits         (Neptune)
- * reserved     32 bits         (Neptune)
- * reserved     cores * 2 bits  (Neptune) rounded up to bytes
+ * reserved     64 bits         (Neptune)
+ * core_status  cores * 2 bits  (Neptune) rounded up to bytes
+ *                              1' want_work 
+ *				1' has_report (unreliable)
  *
  * REPORT
  *
@@ -380,12 +381,34 @@ int knc_syncronous_transfer(void *ctx, int channel, int request_length, const ui
     return knc_verify_response(rxbuf, len, response_length);
 }
 
+int knc_decode_info(uint8_t *response, struct knc_die_info *die_info)
+{
+	int cores_in_die = response[0]<<8 | response[1];
+	int version = response[2]<<8 | response[3];
+	if (version == ASIC_VERSION_JUPITER && cores_in_die <= 48) {
+		die_info->version = KNC_VERSION_JUPITER;
+		die_info->cores = cores_in_die;
+		memset(die_info->want_work, -1, cores_in_die);
+		return 0;
+	} else if (version == ASIC_VERSION_NEPTUNE && cores_in_die <= MAX_CORES_PER_DIE) {
+		die_info->version = KNC_VERSION_NEPTUNE;
+		die_info->cores = cores_in_die;
+		int core;
+		for (core = 0; core < cores_in_die; core++)
+			die_info->want_work[core] = ((response[12 + core/4] >> ((3-(core % 4)) * 2)) >> 1) & 1;
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info)
 {
 	uint8_t get_info[4] = { ASIC_CMD_GETINFO, die, 0, 0 };
 	int response_len = 2 + 2 + 4 + 4 + (MAX_CORES_PER_DIE*2 + 7) / 8;
 	uint8_t response[response_len];
 	int status = knc_syncronous_transfer(ctx, channel, 4, get_info, response_len, response);
+	/* Workaround for pre-ASIC version */
 	int cores_in_die = response[0]<<8 | response[1];
 	int version = response[2]<<8 | response[3];
 	if (version == ASIC_VERSION_NEPTUNE && cores_in_die < MAX_CORES_PER_DIE) {
@@ -394,19 +417,17 @@ int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_inf
 		response_len = 2 + 2 + 4 + 4 + (cores_in_die*2 + 7) / 8;
 		status = knc_syncronous_transfer(ctx, channel, 4, get_info, response_len, response);
 	}
-	if (version == ASIC_VERSION_JUPITER) {
-		applog(LOG_INFO, "KnC %d-%d: Found JUPITER die with %d cores", channel, die, cores_in_die);
-		die_info->version = KNC_VERSION_JUPITER;
-		die_info->cores = cores_in_die;
-		return 0;
-	} else if (version == ASIC_VERSION_NEPTUNE && status == 0) {
-		applog(LOG_INFO, "KnC %d-%d: Found NEPTUNE die with %d cores", channel, die, cores_in_die);
-		die_info->version = KNC_VERSION_NEPTUNE;
-		die_info->cores = cores_in_die;
-		return 0;
-	} else {
+	int rc = -1;
+	if (version == ASIC_VERSION_JUPITER || status == 0)
+		rc = knc_decode_info(response, die_info);
+	if (rc == 0)
+		applog(LOG_INFO, "KnC %d-%d: Found %s die with %d cores", channel, die,
+			die_info->version == KNC_VERSION_NEPTUNE ? "NEPTUNE" : 
+			die_info->version == KNC_VERSION_JUPITER ? "JUPITER" : 
+			"UNKNOWN",
+			cores_in_die);
+	else
 		applog(LOG_DEBUG, "KnC %d-%d: No KnC chip found", channel, die);
-		return -1;
-	}
+	return rc;
 }
 
