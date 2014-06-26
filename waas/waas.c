@@ -108,18 +108,20 @@ struct advanced_config {
 	int die_freq[MAX_ASICS][DIES_IN_ASIC];
 };
 
-static FILE *fopen_temp_file(char **temp_file_name, const char *mode)
+static FILE *fopen_temp_file(const char *target_file_name, char **temp_file_name, const char *mode)
 {
 	FILE *f;
 	int i;
+	char file_name[1024];
 
 	/* try to create temp file up to 10 times, then give up */
 	for (i = 0; i < 10; ++i) {
-		*temp_file_name = tempnam(NULL, "waas");
-		f = fopen(*temp_file_name, mode);
-		if (NULL != f)
+		sprintf(file_name, "%s.%d.%ld%d", target_file_name, getpid(), (long)time(NULL), rand());
+		f = fopen(file_name, mode);
+		if (NULL != f) {
+			*temp_file_name = strdup(file_name);
 			return f;
-		free(*temp_file_name);
+		}
 	}
 
 	*temp_file_name = NULL;
@@ -133,7 +135,7 @@ static void detect_device_type(struct device_t *dev, bool write_to_file)
 	char *temp_file_name = NULL;
 
 	if (write_to_file) {
-		f = fopen_temp_file(&temp_file_name, "w");
+		f = fopen_temp_file(REVISION_FILE, &temp_file_name, "w");
 		if (NULL == f)
 			fprintf(stderr, "Can not open file %s: %m\n", REVISION_FILE);
 	}
@@ -301,7 +303,7 @@ static bool set_die_freq(int asic, int die, int freq)
 		knc_trnsp_free(ctx);
 	}
 
-	f = fopen_temp_file(&temp_file_name, "w");
+	f = fopen_temp_file(WAAS_CURRENT_FREQ, &temp_file_name, "w");
 	if (NULL == f)
 		return false;
 
@@ -760,7 +762,7 @@ static void write_expected_performance(struct advanced_config *cfg, struct devic
 	int sum_freq = 0;
 	int asic, die;
 	char *temp_file_name = NULL;
-	FILE *f = fopen_temp_file(&temp_file_name, "w");
+	FILE *f = fopen_temp_file(EXPECTED_PERFORMANCE_FILE, &temp_file_name, "w");
 	if (NULL == f)
 		return;
 	for (asic = 0; asic < MAX_ASICS; ++asic) {
