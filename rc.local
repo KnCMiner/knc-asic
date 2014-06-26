@@ -35,6 +35,9 @@ echo high > /sys/class/gpio/gpio59/direction
 echo low > /sys/class/gpio/gpio70/direction
 echo low > /sys/class/gpio/gpio71/direction
 
+chmod a+rw /sys/class/gpio/*/direction
+chmod a+rw /sys/class/gpio/*/value
+
 # Enable IO-board power
 io-pwr init
 

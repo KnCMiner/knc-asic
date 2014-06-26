@@ -56,3 +56,7 @@ echo 2-0070 > /sys/bus/i2c/drivers_probe
 
 # Configure LCD
 lcd-message --init -l 2 $(basename $CODE .rbf | sed -e 's/_bitrev//' -e 's/_pad//' ) 2>/dev/null
+
+
+# Allow user access to needed devices
+chmod a+rw /dev/spidev1.0  /dev/i2c-* /sys/bus/i2c/devices/*/eeprom
