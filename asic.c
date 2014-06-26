@@ -80,23 +80,26 @@ static int hex_decode(uint8_t *dst, const char *src, size_t max_len)
 
 static void handle_report(uint8_t *response)
 {
+	struct knc_report report;
 	int nonces = 0;
+	knc_decode_report(response, &report, chip_version);
+
 	switch(chip_version) {
 	case KNC_VERSION_JUPITER:
 		nonces = 1;
-		printf("Next    : %s\n", response[0] & 0x20 ? "LOADED" : "FREE");
-		printf("Current : 0x%x\n", response[2] >> 4);
+		printf("Next    : %s\n", report.next_state ? "LOADED" : "FREE");
+		printf("Current : 0x%x\n", report.active_slot);
 		break;
 	case KNC_VERSION_NEPTUNE:
 		nonces = 5;
-		printf("Next    : 0x%x %s\n", response[0] & 0x0f, response[0] & 0x20 ? "LOADED" : "FREE");
-		printf("Current : 0x%x %s\n", response[2] >> 4, response[0] & 0x10 ? "HASHING" : "IDLE");
+		printf("Next    : 0x%x %s\n", report.next_slot, report.next_state ? "LOADED" : "FREE");
+		printf("Current : 0x%x %s\n", report.active_slot, report.state ? "HASHING" : "IDLE");
 		break;
 	}
-	printf("Progress: 0x%02xxxxxxx\n", response[1]);
+	printf("Progress: 0x%08x\n", report.progress);
 	int n;
 	for (n = 0; n < nonces; n++) {
-		printf("Nonce %d : 0x%x %08x\n", n, response[2 + n*5] & 0xf, response[3 + n*5] << 24 | response[4 + n*5] << 16 | response[5 + n*5] << 8 | response[6 + n*5] << 0);
+		printf("Nonce %d : 0x%x %08x\n", n, report.nonce[n].slot, report.nonce[n].nonce);
 	}
 }
 

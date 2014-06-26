@@ -414,6 +414,50 @@ int knc_decode_info(uint8_t *response, struct knc_die_info *die_info)
 	}
 }
 
+int knc_decode_report(uint8_t *response, struct knc_report *report, int version)
+{
+/*
+ * reserved     2 bits
+ * next_state   1 bit   next work state loaded
+ * state        1 bit   hashing  (0 on Jupiter)
+ * next_slot    4 bit   slot id of next work state (0 on Jupiter)
+ * progress     8 bits  upper 8 bits of nonce counter
+ * active_slot  4 bits  slot id of current work state
+ * nonce_slot   4 bits  slot id of found nonce
+ * nonce        32 bits
+ * 
+ * reserved     4 bits
+ * nonce_slot   4 bits
+ * nonce        32 bits
+ */
+	report->next_state = (response[0] >> 6) & 1;
+	if (version != KNC_VERSION_JUPITER) {
+		report->state = (response[0] >> 5) & 1;
+		report->next_slot = response[0] & ((1<<4)-1);
+	} else {
+		report->state = -1;
+		report->next_slot = -1;
+	}
+	report->progress = (uint32_t)response[1] << 24;
+	report->active_slot = (response[2] >> 4) & ((1<<4)-1);
+	int n;
+	int n_nonces = version == KNC_VERSION_JUPITER ? 1 : 5;
+	for (n = 0; n < n_nonces; n++) {
+		report->nonce[n].slot = response[2+n*5] & ((1<<4)-1);
+		report->nonce[n].nonce =
+				(uint32_t)response[3+n*5] << 24 |
+				(uint32_t)response[4+n*5] << 16 |
+				(uint32_t)response[5+n*5] << 8 |
+				(uint32_t)response[6+n*5] << 0 |
+				0;
+	}
+	for (; n < KNC_NONCES_PER_REPORT; n++) {
+		report->nonce[n].slot = -1;
+		report->nonce[n].nonce = 0;
+	}
+	return 0;
+}
+
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info)
 {
 	uint8_t get_info[4] = { KNC_ASIC_CMD_GETINFO, die, 0, 0 };
