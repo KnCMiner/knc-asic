@@ -33,6 +33,10 @@ struct knc_die_info {
 	} version;
 	char want_work[KNC_MAX_CORES_PER_DIE];
 	int cores;
+	int pll_locked;
+	int hash_reset_n;
+	int pll_reset_n;
+	int pll_power_down;
 };
 
 int knc_prepare_report(uint8_t *request, int die, int core);

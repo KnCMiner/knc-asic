@@ -83,7 +83,12 @@
  *
  * cores        16 bits
  * version      16 bits
- * reserved     64 bits         (Neptune)
+ * reserved     60 bits         (Neptune)
+ * die_status    4 bits		(Neptune)
+ *               1' pll_locked
+ *               1' hash_reset_n	1 if cores have been reset since last report
+ *               1' pll_reset_n		1 if PLL have been reset since last report
+ *               1' pll_power_down
  * core_status  cores * 2 bits  (Neptune) rounded up to bytes
  *                              1' want_work 
  *				1' has_report (unreliable)
@@ -387,6 +392,10 @@ int knc_decode_info(uint8_t *response, struct knc_die_info *die_info)
 		die_info->version = KNC_VERSION_JUPITER;
 		die_info->cores = cores_in_die;
 		memset(die_info->want_work, -1, cores_in_die);
+		die_info->pll_power_down = -1;
+		die_info->pll_reset_n = -1;
+		die_info->hash_reset_n = -1;
+		die_info->pll_locked = -1;
 		return 0;
 	} else if (version == KNC_ASIC_VERSION_NEPTUNE && cores_in_die <= KNC_MAX_CORES_PER_DIE) {
 		die_info->version = KNC_VERSION_NEPTUNE;
@@ -394,6 +403,11 @@ int knc_decode_info(uint8_t *response, struct knc_die_info *die_info)
 		int core;
 		for (core = 0; core < cores_in_die; core++)
 			die_info->want_work[core] = ((response[12 + core/4] >> ((3-(core % 4)) * 2)) >> 1) & 1;
+		int die_status = response[11] & 0xf;
+		die_info->pll_power_down = (die_status >> 0) & 1;
+		die_info->pll_reset_n = (die_status >> 1) & 1;
+		die_info->hash_reset_n = (die_status >> 2) & 1;
+		die_info->pll_locked = (die_status >> 3) & 1;
 		return 0;
 	} else {
 		return -1;

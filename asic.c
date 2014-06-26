@@ -24,6 +24,10 @@ static void do_info(void *ctx, int channel, int die, UNUSED int argc, UNUSED cha
 
 	printf("Version: %d\n", die_info.version);
 	printf("Cores: %d\n", die_info.cores);
+	if (die_info.pll_power_down >= 0) printf("PLL power: %s\n", die_info.pll_power_down ? "DOWN" : "UP");
+	if (die_info.pll_locked >= 0)     printf("PLL status: %s\n", die_info.pll_locked ? "GOOD" : "BAD");
+	if (die_info.hash_reset_n >= 0)   printf("HASH reset: %s\n", die_info.hash_reset_n ? "NORMAL" : "RESET");
+	if (die_info.pll_reset_n >= 0)    printf("PLL reset: %s\n", die_info.pll_reset_n ? "NORMAL" : "RESET");
 	printf("Want work: ");
 	int core;
 	for (core = 0; core < die_info.cores; core++) {
