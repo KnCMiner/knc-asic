@@ -1,5 +1,33 @@
 #!/bin/sh
 
+PROGNAME=$(basename "$0")
+LOCKFILE_DIR=/var/lock
+LOCK_FD=200
+LOCK_SLEEP_USECS=333333
+LOCK_SLEEP_PERIODS=15
+
+lock() {
+  local prefix=$1
+  local fd=${2:-$LOCK_FD}
+  local lock_file=$LOCKFILE_DIR/$prefix.lock
+  local i=0
+
+  # create lock file
+  eval "exec $fd>$lock_file"
+
+  # acquire the lock
+  while ! flock -x -n $fd; do
+    i=$((i+1))
+    if [ $i -gt $LOCK_SLEEP_PERIODS ]; then
+      return 1
+    fi
+    usleep $LOCK_SLEEP_USECS
+  done
+  return 0
+}
+
+lock $PROGNAME || exit 1
+
 if [ "x$1" = "x--init" ]; then
 	shift
 	# Comm setup
