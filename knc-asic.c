@@ -259,6 +259,26 @@ int knc_prepare_report(uint8_t *request, int die, int core)
 	return 4;
 }
 
+int knc_prepare_info(uint8_t *request, int die, struct knc_die_info *die_info, int *response_size)
+{
+	request[0] = KNC_ASIC_CMD_GETINFO;
+	request[1] = die;
+	request[2] = 0;
+	request[3] = 0;
+	switch (die_info->version) {
+	case KNC_VERSION_JUPITER:
+		*response_size = 4;
+		break;
+	default:
+		*response_size = 12 + (KNC_MAX_CORES_PER_DIE*2 + 7) / 8;
+		break;
+	case KNC_VERSION_NEPTUNE:
+		*response_size = 12 + (die_info->cores*2 + 7) / 8;
+		break;
+	}
+	return 4;
+}
+
 int knc_prepare_neptune_setwork(uint8_t *request, int die, int core, int slot, struct work *work, int clean)
 {
 	if (!clean)
@@ -335,7 +355,7 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 /* red, green, blue valid range 0 - 15 */
 int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, int blue)
 {
-	/* FPGA control, request header, request body/response, CRC(4), ACK(1), EXTRA(3) */
+	/* 4'h1 4'red 4'green 4'blue */
         int len = 2;
 	txbuf += offset;
 
@@ -348,6 +368,25 @@ int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, in
 
 	return offset + len;
 	
+}
+
+/* reset controller */
+int knc_prepare_reset(uint8_t *txbuf, int offset, int size)
+{
+	/* 16'h0002 16'unused */
+        int len = 4;
+	txbuf += offset;
+
+	if (len + offset > size) {
+		applog(LOG_DEBUG, "KnC SPI buffer full");
+		return -1;
+	}
+	txbuf[0] = (0x0002) >> 8;
+	txbuf[1] = (0x0002) & 0xff;
+	txbuf[2] = 0;
+	txbuf[3] = 0;
+
+	return offset + len;
 }
 
 /* request_length = 0 disables communication checks, i.e. Jupiter protocol */
@@ -478,10 +517,13 @@ int knc_decode_report(uint8_t *response, struct knc_report *report, int version)
 
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info)
 {
-	uint8_t get_info[4] = { KNC_ASIC_CMD_GETINFO, die, 0, 0 };
+	uint8_t request[4];
 	int response_len = 2 + 2 + 4 + 4 + (KNC_MAX_CORES_PER_DIE*2 + 7) / 8;
 	uint8_t response[response_len];
-	int status = knc_syncronous_transfer(ctx, channel, 4, get_info, response_len, response);
+
+	int request_len = knc_prepare_info(request, die, die_info, &response_len);
+	int status = knc_syncronous_transfer(ctx, channel, request_len, request, response_len, response);
+
 	/* Workaround for pre-ASIC version */
 	int cores_in_die = response[0]<<8 | response[1];
 	int version = response[2]<<8 | response[3];
@@ -489,7 +531,7 @@ int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_inf
 		applog(LOG_DEBUG, "KnC %d-%d: Looks like a NEPTUNE die with %d cores", channel, die, cores_in_die);
 		/* Try again with right response size */
 		response_len = 2 + 2 + 4 + 4 + (cores_in_die*2 + 7) / 8;
-		status = knc_syncronous_transfer(ctx, channel, 4, get_info, response_len, response);
+		status = knc_syncronous_transfer(ctx, channel, request_len, request, response_len, response);
 	}
 	int rc = -1;
 	if (version == KNC_ASIC_VERSION_JUPITER || status == 0)

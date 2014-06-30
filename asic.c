@@ -12,11 +12,26 @@
 
 #define UNUSED __attribute__((unused))
 
-int chip_version = KNC_VERSION_UNKNOWN;
+struct knc_die_info die_info;
+
+#define chip_version (die_info.version)
+
+static void detect_chip(void *ctx, int channel, int die)
+{
+	if (chip_version != KNC_VERSION_UNKNOWN)
+		return;
+
+	if (knc_detect_die(ctx, channel, die, &die_info) != 0) {
+		printf("ERROR: No asic found\n");
+		exit(1);
+	}
+	chip_version = die_info.version;
+}
 
 static void do_info(void *ctx, int channel, int die, UNUSED int argc, UNUSED char **args)
 {
-	struct knc_die_info die_info;
+	detect_chip(ctx, channel, die);
+
 	if (knc_detect_die(ctx, channel, die, &die_info) != 0) {
 		printf("ERROR: No asic found\n");
 		exit(1);
@@ -38,21 +53,6 @@ static void do_info(void *ctx, int channel, int die, UNUSED int argc, UNUSED cha
 	putchar('\n');
 	chip_version = die_info.version;
 }
-
-static void detect_chip(void *ctx, int channel, int die)
-{
-	if (chip_version != KNC_VERSION_UNKNOWN)
-		return;
-
-	struct knc_die_info die_info;
-
-	if (knc_detect_die(ctx, channel, die, &die_info) != 0) {
-		printf("ERROR: No asic found\n");
-		exit(1);
-	}
-	chip_version = die_info.version;
-}
-
 
 static int hex_decode(uint8_t *dst, const char *src, size_t max_len)
 {
@@ -95,6 +95,8 @@ static void handle_report(uint8_t *response)
 		printf("Next    : 0x%x %s\n", report.next_slot, report.next_state ? "LOADED" : "FREE");
 		printf("Current : 0x%x %s\n", report.active_slot, report.state ? "HASHING" : "IDLE");
 		break;
+	case KNC_VERSION_UNKNOWN:
+		break; /* To keep GCC happy */
 	}
 	printf("Progress: 0x%08x\n", report.progress);
 	int n;
@@ -157,6 +159,8 @@ static void do_setwork(void *ctx, int channel, int die, UNUSED int argc, char **
 		}
 		handle_report(response);
 		break;
+	case KNC_VERSION_UNKNOWN:
+		break; /* To keep GCC happy */
 	}
 }
 
@@ -184,6 +188,8 @@ static void do_report(void *ctx, int channel, int die, UNUSED int argc, char **a
 			applog(LOG_ERR, "KnC %d-%d: Failed (%x)", channel, die, status);
 			return;
 		}
+	case KNC_VERSION_UNKNOWN:
+		break; /* To keep GCC happy */
 	}
 	handle_report(response);
 }
@@ -213,6 +219,8 @@ static void do_halt(void *ctx, int channel, int die, UNUSED int argc, char **arg
 			applog(LOG_ERR, "KnC %d-%d: Failed (%x)", channel, die, status);
 			return;
 		}
+	case KNC_VERSION_UNKNOWN:
+		break; /* To keep GCC happy */
 	}
 }
 
@@ -305,15 +313,20 @@ int main(int argc, char **argv)
 	char *command;
 	char **args = &argv[1];
 	
-	while (argc > 1 && *args[0] == '-') {
-		if (strcmp(*args, "-n") == 0)
-			chip_version = KNC_VERSION_NEPTUNE;
+	for (;argc > 1 && *args[0] == '-'; argc--, args++) {
+		if (strcmp(*args, "-n") == 0) {
+			die_info.version = KNC_VERSION_NEPTUNE;
+			die_info.cores = 360;
+		}
+		if (strcmp(*args, "-c") == 0 && argc > 1)  {
+			die_info.cores = atoi(args[1]);
+			argc--;
+			args++;
+		}
 		if (strcmp(*args, "-j") == 0)
 			chip_version = KNC_VERSION_JUPITER;
 		if (strcmp(*args, "-d") == 0)
 			debug_level = LOG_DEBUG;
-		argc--;
-		args++;
 	}
 	if (argc < 4) {
 		fprintf(stderr, "Usage: %s command arguments..\n", argv[0]);
