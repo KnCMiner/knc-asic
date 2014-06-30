@@ -46,6 +46,10 @@
  * Clock frequency
  *   4'h2 12'msglen_in_bits 4'channel 4'die 16'MHz 512'x
  * Configures the hashing clock rate
+ *
+ * Reset controller
+ *   4'h0002
+ * Reset the controller.
  */
 
 /* ASIC Command structure
@@ -373,7 +377,7 @@ int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, in
 /* reset controller */
 int knc_prepare_reset(uint8_t *txbuf, int offset, int size)
 {
-	/* 16'h0002 16'unused */
+	/* 16'h2 16'unused */
         int len = 4;
 	txbuf += offset;
 

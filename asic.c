@@ -273,13 +273,16 @@ static void do_freq(void *ctx, int channel, int die, UNUSED int argc, char **arg
 		applog(LOG_ERR, "KnC %d-%d: Frequency change FAILED!", channel, die);
 }
 
-static void do_status(void *ctx, int channel, UNUSED int die, UNUSED int argc, UNUSED char **args)
+/* TODO: Move bits to knc-asic.[ch] */
+static void do_status(void *ctx, UNUSED int argc, char **args)
 {
 	/* 4'op=3, 3'channel, 9'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die) */
 	int request_len = 16;
 	int len = (request_len + 32 + 8 + 8 + 48 + 360 * 4) / 8;
 	uint8_t request[len];
 	uint8_t response[len];
+
+	int channel = atoi(*args++); argc--;
 
 	memset(request, 0, sizeof(request));
 	request[0] = 3 << 4 | (channel + 1) << 1;
@@ -288,15 +291,39 @@ static void do_status(void *ctx, int channel, UNUSED int die, UNUSED int argc, U
 
 }
 
-struct knc_command {
+static void do_reset(void *ctx, UNUSED int argc, UNUSED char **args)
+{
+	uint8_t request[256];
+	uint8_t response[256];
+
+	int len = knc_prepare_reset(request, 0, sizeof(request));
+
+	knc_trnsp_transfer(ctx, request, response, len);
+
+}
+
+static void do_led(void *ctx, UNUSED int arg, char **args)
+{
+	uint8_t request[256];
+	uint8_t response[256];
+
+	uint32_t red = strtoul(*args++, NULL, 0);
+	uint32_t green = strtoul(*args++, NULL, 0);
+	uint32_t blue = strtoul(*args++, NULL, 0);
+
+	int len = knc_prepare_led(request, 0, sizeof(request), red, green, blue);
+
+	knc_trnsp_transfer(ctx, request, response, len);
+}
+
+struct knc_asic_command {
 	const char *name;
 	const char *args;
 	const char *description;
 	int nargs;
 	void (*handler)(void *ctx, int channel, int die, int nargs, char **args);
-} knc_commands[] = {
+} knc_asic_commands[] = {
 	{"info", "", "ASIC version & info", 0, do_info},
-	{"status", "", "ASIC status", 0, do_status},
 	{"setwork", "core slot(1-15) clean(0/1) midstate data", "Set work vector", 5, do_setwork},
 	{"report", "core", "Get nonce report", 1, do_report},
 	{"halt", "core", "Halt core", 1, do_halt},
@@ -305,9 +332,35 @@ struct knc_command {
 	{NULL, NULL, NULL, 0, NULL}
 };
 
+struct knc_ctrl_command {
+	const char *name;
+	const char *args;
+	const char *description;
+	int nargs;
+	void (*handler)(void *ctx, int nargs, char **args);
+} knc_ctrl_commands[] = {
+	{"status", "channel", "ASIC status", 1, do_status},
+	{"led", "red green blue", "Controller LED color", 3, do_led},
+	{"reset", "", "Reset controller", 0, do_reset},
+	{NULL, NULL, NULL, 0, NULL}
+};
+
+void usage(char *program_name)
+{
+	fprintf(stderr, "Usage: %s command arguments..\n", program_name);
+	{
+		struct knc_ctrl_command *cmd;
+		for (cmd = knc_ctrl_commands; cmd->name; cmd++)
+			fprintf(stderr, "  %s %s\n	%s\n", cmd->name, cmd->args, cmd->description);
+	}
+	{
+		struct knc_asic_command *cmd;
+		for (cmd = knc_asic_commands; cmd->name; cmd++)
+			fprintf(stderr, "  %s channel die %s\n	%s\n", cmd->name, cmd->args, cmd->description);
+	}
+}
 int main(int argc, char **argv)
 {
-	struct knc_command *cmd;
 	void *ctx = knc_trnsp_new(0);
 	int channel, die;
 	char *command;
@@ -328,14 +381,31 @@ int main(int argc, char **argv)
 		if (strcmp(*args, "-d") == 0)
 			debug_level = LOG_DEBUG;
 	}
-	if (argc < 4) {
-		fprintf(stderr, "Usage: %s command arguments..\n", argv[0]);
-		for (cmd = knc_commands; cmd->name; cmd++)
-			fprintf(stderr, "  %s channel die %s\n	%s\n", cmd->name, cmd->args, cmd->description);
+	argc--;
+	if (argc < 1) {
+		usage(argv[0]);
 		exit(1);
 	}
 
 	command = *args++; argc--;
+	{
+		struct knc_ctrl_command *cmd;
+		for (cmd = knc_ctrl_commands; cmd->name; cmd++) {
+			if (strcmp(cmd->name, command) == 0) {
+				if (argc != cmd->nargs && cmd->nargs != -1) {
+					fprintf(stderr, "ERROR: Invalid arguments");
+					exit(1);
+				}
+				cmd->handler(ctx, argc, args);
+				goto done;
+			}
+		}
+	}
+
+	if (argc < 2) {
+		usage(argv[0]);
+		exit(1);
+	}
 	if (isdigit(*command)) {
 		channel = atoi(command);
 	} else {
@@ -345,17 +415,18 @@ int main(int argc, char **argv)
 	if (isdigit(*command)) {
 		command = *args++; argc--;
 	}
-	argc--;
 
-	for (cmd = knc_commands; cmd->name; cmd++) {
-		if (strcmp(cmd->name, command) == 0) {
-			if (argc != cmd->nargs && cmd->nargs != -1) {
-				fprintf(stderr, "ERROR: Invalid arguments");
-				exit(1);
+	{
+		struct knc_asic_command *cmd;
+		for (cmd = knc_asic_commands; cmd->name; cmd++) {
+			if (strcmp(cmd->name, command) == 0) {
+				if (argc != cmd->nargs && cmd->nargs != -1) {
+					fprintf(stderr, "ERROR: Invalid arguments");
+					exit(1);
+				}
+				cmd->handler(ctx, channel, die, argc, args);
+				goto done;
 			}
-			cmd->handler(ctx, channel, die, argc, args);
-			goto done;
-
 		}
 	}
 
