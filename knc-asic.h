@@ -1,6 +1,5 @@
 #ifndef _CGMINER_NEPTUNE_H
-#define _CGMINER_NEPTUNE_H
-
+#define _CGMINER_NEPTUNE_H 
 #include <stdint.h>
 #include "miner.h"
 
@@ -75,5 +74,8 @@ int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, 
 int knc_syncronous_transfer(void *ctx, int channel, int request_length, const uint8_t *request, int response_length, uint8_t *response);
 
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);
+
+/* red, green, blue valid range 0 - 15. No response or checksum from controller */
+int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, int blue);
 
 #endif

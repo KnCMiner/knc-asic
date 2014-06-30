@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "miner.h"
+#include "knc-asic.h"
 #include "knc-transport.h"
 #include "logging.h"
 
@@ -26,9 +27,8 @@ int main(int argc, char **argv)
 	uint32_t red = strtoul(*args++, NULL, 0);
 	uint32_t green = strtoul(*args++, NULL, 0);
 	uint32_t blue = strtoul(*args++, NULL, 0);
-	request[0] = 1 << 4 | red;
-	request[1] = green << 4 | blue;
-	knc_trnsp_transfer(ctx, request, response, 2);
+	int len = knc_prepare_led(request, 0, sizeof(request), red, green, blue);
+	knc_trnsp_transfer(ctx, request, response, len);
 
 	knc_trnsp_free(ctx);
 	

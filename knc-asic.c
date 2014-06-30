@@ -332,6 +332,24 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 	return offset + len;
 }
 
+/* red, green, blue valid range 0 - 15 */
+int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, int blue)
+{
+	/* FPGA control, request header, request body/response, CRC(4), ACK(1), EXTRA(3) */
+        int len = 2;
+	txbuf += offset;
+
+	if (len + offset > size) {
+		applog(LOG_DEBUG, "KnC SPI buffer full");
+		return -1;
+	}
+	txbuf[0] = 1 << 4 | red;
+	txbuf[1] = green << 4 | blue;
+
+	return offset + len;
+	
+}
+
 /* request_length = 0 disables communication checks, i.e. Jupiter protocol */
 int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, int response_length)
 {

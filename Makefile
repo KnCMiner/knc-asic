@@ -10,7 +10,7 @@ all: $(BINARIES) waas
 
 asic: knc-asic.o knc-transport-spi.o logging.o
 
-knc-led: knc-transport-spi.o logging.o
+knc-led: knc-asic.o knc-transport-spi.o logging.o
 
 io-pwr: i2c.o tps65217.o
 
