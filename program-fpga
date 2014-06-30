@@ -6,7 +6,7 @@ nCONFIG="/sys/class/gpio/gpio67/value"
 CONFIG_DONE="/sys/class/gpio/gpio66/value"
 nSTATUS="/sys/class/gpio/gpio69/value"
 SPI="/dev/spidev1.0"
-CODE="${1:-/usr/lib/spimux_bitrev_pad.rbf}"
+CODE="${1:-spimux.rbf}"
 
 ioget() {
 	eval cat \$$1
