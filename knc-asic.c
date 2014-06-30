@@ -487,9 +487,9 @@ int knc_decode_report(uint8_t *response, struct knc_report *report, int version)
  * nonce_slot   4 bits
  * nonce        32 bits
  */
-	report->next_state = (response[0] >> 6) & 1;
+	report->next_state = (response[0] >> 5) & 1;
 	if (version != KNC_VERSION_JUPITER) {
-		report->state = (response[0] >> 5) & 1;
+		report->state = (response[0] >> 4) & 1;
 		report->next_slot = response[0] & ((1<<4)-1);
 	} else {
 		report->state = -1;
