@@ -1,32 +1,25 @@
 #!/bin/sh
 
 PROGNAME=$(basename "$0")
-LOCKFILE_DIR=/var/lock
-LOCK_FD=200
+LOCKFILE=/var/lock/$PROGNAME.lock
 LOCK_SLEEP_USECS=333333
+LOCK_SLEEP_SECS=0.333333
 LOCK_SLEEP_PERIODS=15
 
-lock() {
-  local prefix=$1
-  local fd=${2:-$LOCK_FD}
-  local lock_file=$LOCKFILE_DIR/$prefix.lock
-  local i=0
-
-  # create lock file
-  eval "exec $fd>$lock_file"
-
-  # acquire the lock
-  while ! flock -x -n $fd; do
-    i=$((i+1))
-    if [ $i -gt $LOCK_SLEEP_PERIODS ]; then
-      return 1
-    fi
-    usleep $LOCK_SLEEP_USECS
-  done
-  return 0
-}
-
-lock $PROGNAME || exit 1
+# Make sure we have the lock
+if [ "$FLOCKER" != "$0" ]; then
+	i=0
+	# A little dance to implement timeout, missing in busybox flock
+	while true; do
+		if env FLOCKER="$0" flock -x -n $LOCKFILE $0 "$@"; then
+			exit 0
+		fi 
+		i=$((i+1))
+		usleep $LOCK_SLEEP_USECS 2>/dev/null || sleep $LOCK_SLEEP_SECS
+	done
+	echo "Failed to aquuire lock on $LOCKFILE"
+	exit 1
+fi
 
 if [ "x$1" = "x--init" ]; then
 	shift
@@ -64,3 +57,5 @@ while [ "$text" != "" ]; do
 	text="`echo "$text" | cut -c31-`"
 	i2cset -y 3 0x3e 0x40 `echo -n "$frag" | hexdump -v -e '/1 "%u "'` i
 done
+
+rm -f $LOCKFILE
