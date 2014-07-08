@@ -278,7 +278,7 @@ static void do_status(void *ctx, UNUSED int argc, char **args)
 {
 	/* 4'op=3, 3'channel, 9'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die) */
 	int request_len = 16;
-	int len = (request_len + 32 + 8 + 8 + 48 + 360 * 4) / 8;
+	int len = (request_len + 32 + 8 + 8 + 48 + KNC_MAX_CORES_PER_DIE * 4) / 8;
 	uint8_t request[len];
 	uint8_t response[len];
 
@@ -289,6 +289,18 @@ static void do_status(void *ctx, UNUSED int argc, char **args)
 
 	knc_trnsp_transfer(ctx, request, response, len);
 
+	printf("FPGA Version: %02X%02X%02X%02X\n", response[2], response[3], response[4], response[5]);
+	printf("Board Type  : %02X\n", response[6]);
+	printf("Board Rev   : %02X\n", response[7]);
+	printf("Core map    : ");
+	int i;
+	for (i = 0; i < KNC_MAX_CORES_PER_DIE * 4; i++) {
+		if (response[14 + i / 8] >> (i % 8))
+			printf("+");
+		else
+			printf("-");
+	}
+	printf("\n");
 }
 
 static void do_reset(void *ctx, UNUSED int argc, UNUSED char **args)
