@@ -8,5 +8,7 @@ umount /boot
 cp BB-* /lib/firmware/
 ln -sf $PWD/../rc.local /etc/
 sudo ln -sf $PWD/dhclient-lcd.sh /etc/dhcp/dhclient-enter-hooks.d/
+sudo ln -sf $PWD/../asic /usr/bin/
+sudo ln -sf $PWD/../../spi-test/spi-test /usr/bin/
 #cp rc-local.service /etc/systemd/system/
 #systemctl enable rc-local
