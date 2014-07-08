@@ -289,18 +289,21 @@ static void do_status(void *ctx, UNUSED int argc, char **args)
 
 	knc_trnsp_transfer(ctx, request, response, len);
 
-	printf("FPGA Version: %02X%02X%02X%02X\n", response[2], response[3], response[4], response[5]);
-	printf("Board Type  : %02X\n", response[6]);
-	printf("Board Rev   : %02X\n", response[7]);
-	printf("Core map    : ");
+	printf("FPGA Version : %02X%02X%02X%02X\n", response[2], response[3], response[4], response[5]);
+	printf("Board Type   : %02X\n", response[6]);
+	printf("Board Rev    : %02X\n", response[7]);
+	printf("Core map     : ");
 	int i;
+	int cores = 0;
 	for (i = 0; i < KNC_MAX_CORES_PER_DIE * 4; i++) {
-		if (response[14 + i / 8] >> (i % 8))
+		if (response[14 + i / 8] >> (i % 8)) {
 			printf("+");
-		else
+			cores++;
+		} else
 			printf("-");
 	}
 	printf("\n");
+	printf("Cores       : %d\n", cores);
 }
 
 static void do_reset(void *ctx, UNUSED int argc, UNUSED char **args)
