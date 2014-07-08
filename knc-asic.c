@@ -415,7 +415,7 @@ int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, 
 	}
     }
       
-    if (response_length == 0)
+    if (request_length == 0)
 	return 0;
 
     uint8_t ack = rxbuf[len - 4];
