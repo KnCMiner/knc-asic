@@ -30,8 +30,6 @@ static void detect_chip(void *ctx, int channel, int die)
 
 static void do_info(void *ctx, int channel, int die, UNUSED int argc, UNUSED char **args)
 {
-	detect_chip(ctx, channel, die);
-
 	if (knc_detect_die(ctx, channel, die, &die_info) != 0) {
 		printf("ERROR: No asic found\n");
 		exit(1);
