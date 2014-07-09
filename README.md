@@ -13,6 +13,10 @@ sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install build-essentials
 sudo apt-get install autoconf automake libz-dev libcurl4-openssl-dev ncurses-dev libltdl-dev libtool
+git clone git@github.com:KnCMiner/spi-test
+cd spi-test
+make
+cd ..
 git clone git@github.com:KnCMiner/knc-asic
 cd knc-asic
 make
