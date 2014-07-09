@@ -12,7 +12,7 @@ Recommended environment for development is a minimal Debian system. Then log in 
 sudo apt-get update
 sudo apt-get upgrade
 sudo apt-get install build-essentials
-sudo apt-get install autoconf automake libz-dev libcurl4-openssl-dev ncurses-dev
+sudo apt-get install autoconf automake libz-dev libcurl4-openssl-dev ncurses-dev libltdl-dev libtool
 git clone git@github.com:KnCMiner/knc-asic
 cd knc-asic
 make
@@ -30,7 +30,7 @@ git clone -b knc2 git@github.com:KnCMiner/cgminer
 cd cgminer
 NOCONFIGURE=1 ./autogen.sh
 ./configure --enable-knc
-make
+make -j2
 </pre>
 
 
