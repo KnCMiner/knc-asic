@@ -5,6 +5,7 @@ LOCKFILE=/var/lock/$PROGNAME.lock
 LOCK_SLEEP_USECS=333333
 LOCK_SLEEP_SECS=0.333333
 LOCK_SLEEP_PERIODS=15
+PATH="${PATH}:/usr/sbin"
 
 # Make sure we have the lock
 if [ "$FLOCKER" != "$0" ]; then
