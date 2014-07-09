@@ -287,7 +287,7 @@ static void do_status(void *ctx, UNUSED int argc, char **args)
 
 	knc_trnsp_transfer(ctx, request, response, len);
 
-	printf("FPGA Version : %02X%02X%02X%02X\n", response[2], response[3], response[4], response[5]);
+	printf("FPGA Version : %4s (%02X%02X%02X%02X)\n", response+2, response[2], response[3], response[4], response[5]);
 	printf("Board Type   : %02X\n", response[6]);
 	printf("Board Rev    : %02X\n", response[7]);
 	printf("Core map     : ");
