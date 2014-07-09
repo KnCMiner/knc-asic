@@ -114,6 +114,20 @@ waas command
 ===
 The waas command is responsible for detecting ASIC boards and starting them. Currently needs to be run as root.
 
+First time you need to create it's config file by running
+
+<pre>
+sudo waas -d -o /config/advanced.conf
+</pre>
+
+To activate a new config (or after boot) run waas without any arguments
+
+<pre>
+sudo waas
+</pre>
+
+Other usage options are available. See below.
+
 <pre>
 WAAS = Work-Arounds and Advanced Settings
 Command-line options:
