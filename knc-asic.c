@@ -35,6 +35,10 @@
  *   1'b1 3'channel 12'msglen_in_bits SPI message data
  * Sends the supplied message on selected SPI bus
  *
+ * Channel status
+ *   4'op=3, 3'channel, 9'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die)
+ * request information about a channel
+ * 
  * Communication test
  *   16'h1 16'x
  * Simple test of SPI communication
@@ -391,6 +395,47 @@ int knc_prepare_reset(uint8_t *txbuf, int offset, int size)
 	txbuf[3] = 0;
 
 	return offset + len;
+}
+
+
+/* controller channel status */
+int knc_prepare_status(uint8_t *txbuf, int offset, int size, int channel)
+{
+	/* 4'op=3, 3'channel, 9'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die) */
+	int len = (16 + 32 + 8 + 8 + 48 + KNC_MAX_CORES_PER_DIE * 4) / 8;
+
+	if (len + offset > size) {
+		applog(LOG_DEBUG, "KnC SPI buffer full");
+		return -1;
+	}
+
+	memset(txbuf, 0, len);
+	txbuf[0] = 3 << 4 | (channel + 1) << 1;
+
+	return len;
+}
+
+int knc_decode_status(uint8_t *response, struct knc_spimux_status *status)
+{
+	memcpy(status->revision, response+2, 4);
+	status->revision[4] = '\0';
+	status->board_type = response[6];
+	status->board_rev = response[7];
+	if (memcmp(status->revision, "\377\377\377\377", 4) == 0) {
+		memset(status, 0, sizeof(*status));
+		return -1; /* No FPGA found */
+	}
+	int die;
+	for (die = 0; die < KNC_MAX_DIES_PER_ASIC; die++) {
+		int core;
+		for (core = 0; core < KNC_MAX_CORES_PER_DIE; core++) {
+			int i = die * KNC_MAX_CORES_PER_DIE + core;
+			status->core_status[die][core] = 0;
+			if (response[14 + i / 8] >> (i % 8))
+				status->core_status[die][core] |= KNC_CORE_AVAILABLE;
+		}
+	}
+	return 0;
 }
 
 /* request_length = 0 disables communication checks, i.e. Jupiter protocol */

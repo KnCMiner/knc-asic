@@ -274,31 +274,36 @@ static void do_freq(void *ctx, int channel, int die, UNUSED int argc, char **arg
 /* TODO: Move bits to knc-asic.[ch] */
 static void do_status(void *ctx, UNUSED int argc, char **args)
 {
-	/* 4'op=3, 3'channel, 9'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die) */
-	int request_len = 16;
-	int len = (request_len + 32 + 8 + 8 + 48 + KNC_MAX_CORES_PER_DIE * 4) / 8;
-	uint8_t request[len];
-	uint8_t response[len];
+	uint8_t request[1024];
+	uint8_t response[1024];
+	struct knc_spimux_status status;
 
 	int channel = atoi(*args++); argc--;
 
-	memset(request, 0, sizeof(request));
-	request[0] = 3 << 4 | (channel + 1) << 1;
+	int len = knc_prepare_status(request, 0, sizeof(request), channel);
 
 	knc_trnsp_transfer(ctx, request, response, len);
 
-	printf("FPGA Version : %4s (%02X%02X%02X%02X)\n", response+2, response[2], response[3], response[4], response[5]);
-	printf("Board Type   : %02X\n", response[6]);
-	printf("Board Rev    : %02X\n", response[7]);
+	if (knc_decode_status(response, &status) < 0) {
+		applog(LOG_ERR, "KnC %d: No controller found", channel);
+		return;
+	}
+
+	printf("FPGA Version : %s\n", status.revision);
+	printf("Board Type   : %02X\n", status.board_type);
+	printf("Board Rev    : %02X\n", status.board_rev);
 	printf("Core map     : ");
-	int i;
 	int cores = 0;
-	for (i = 0; i < KNC_MAX_CORES_PER_DIE * 4; i++) {
-		if (response[14 + i / 8] >> (i % 8)) {
-			printf("+");
-			cores++;
-		} else
-			printf("-");
+	int die, core;
+	for (die = 0; die < KNC_MAX_DIES_PER_ASIC; die++) {
+		for (core = 0; core < KNC_MAX_CORES_PER_DIE; core++) {
+			if (status.core_status[die][core]) {
+				printf("+");
+				cores++;
+			} else {
+				printf("-");
+			}
+		}
 	}
 	printf("\n");
 	printf("Cores       : %d\n", cores);

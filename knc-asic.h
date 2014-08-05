@@ -23,6 +23,7 @@
 /* Limits of current chips & I/O board */
 #define KNC_MAX_CORES_PER_DIE	360
 #define KNC_MAX_ASICS 6
+#define KNC_MAX_DIES_PER_ASIC	4
 
 struct knc_die_info {
 	enum {
@@ -75,6 +76,18 @@ void knc_prepare_neptune_message(int request_length, const uint8_t *request, uin
 int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int request_length, const uint8_t *request, int response_length);
 int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, int response_length);
 int knc_syncronous_transfer(void *ctx, int channel, int request_length, const uint8_t *request, int response_length, uint8_t *response);
+
+/* Controller channel status */
+struct knc_spimux_status
+{
+	char revision[5];
+	int board_type;
+	int board_rev;
+	int core_status[KNC_MAX_DIES_PER_ASIC][KNC_MAX_CORES_PER_DIE];
+};
+#define KNC_CORE_AVAILABLE (1<<0)
+int knc_prepare_status(uint8_t *txbuf, int offset, int size, int channel);
+int knc_decode_status(uint8_t *response, struct knc_spimux_status *status);
 
 /* Detect ASIC DIE version */
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);
