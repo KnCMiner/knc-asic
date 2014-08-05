@@ -236,37 +236,19 @@ static void do_raw(void *ctx, int channel, int die, UNUSED int argc, char **args
 
 static void do_freq(void *ctx, int channel, int die, UNUSED int argc, char **args)
 {
-	/* 4'op=2, 12'length, 4'bus, 4'die, 16'freq, many more clocks */
-	int request_len = 4 + 12 + 16 + 4 + 4 + 16;
-	int len = (request_len + 1000) / 8;
-	uint8_t request[len];
-	uint8_t response[len];
+	uint8_t request[2048];
+	uint8_t response[2048];
 
-	uint32_t freq = strtoul(*args++, NULL, 0);
+	int freq = strtoul(*args++, NULL, 0);
 
-	if (freq > 1000000)
-		freq = freq / 1000000;  // Assume Hz was given instead of MHz
-
-	memset(request, 0, sizeof(request));
-	request[0] = 2 << 4 | ((len * 8) >> 8);
-	request[1] = (len * 8) >> 0;
-	request[2] = ((channel+1) << 4)  | (die << 0);
-	request[3] = (freq >> 8);
-	request[4] = (freq >> 0);
+	int len = knc_prepare_freq(request, 0, sizeof(request), channel, die, freq);
 
 	knc_trnsp_transfer(ctx, request, response, len);
 
-	int i;
-	for (i = request_len / 8; i < len-1; i++) {
-		if (response[i] == 0xf1) {
-			break;
-		} else if (response[i] == 0xf0) {
-			applog(LOG_DEBUG, "KnC %d-%d: Accepted FREQ=%d", channel, die, response[i+1]<<8 | response[i+2]);
-			i+=2;
-		}
-	}
-	if (response[i] == 0xf1)
-		applog(LOG_INFO, "KnC %d-%d: Frequency change successful", channel, die);
+	freq = knc_decode_freq(response);
+
+	if (freq >= 0)
+		applog(LOG_NOTICE, "KnC %d-%d: Frequency change successful, FREQ=%d", channel, die, freq);
 	else
 		applog(LOG_ERR, "KnC %d-%d: Frequency change FAILED!", channel, die);
 }

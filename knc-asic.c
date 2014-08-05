@@ -403,6 +403,7 @@ int knc_prepare_status(uint8_t *txbuf, int offset, int size, int channel)
 {
 	/* 4'op=3, 3'channel, 9'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die) */
 	int len = (16 + 32 + 8 + 8 + 48 + KNC_MAX_CORES_PER_DIE * 4) / 8;
+	txbuf += offset;
 
 	if (len + offset > size) {
 		applog(LOG_DEBUG, "KnC SPI buffer full");
@@ -436,6 +437,59 @@ int knc_decode_status(uint8_t *response, struct knc_spimux_status *status)
 		}
 	}
 	return 0;
+}
+
+#define FREQ_RESPONSE_PAD 1000
+/* controller ASIC clock configuration */
+int knc_prepare_freq(uint8_t *txbuf, int offset, int size, int channel, int die, int freq)
+{
+	/* 4'op=2, 12'length, 4'bus, 4'die, 16'freq, many more clocks */
+	int request_len = 4 + 12 + 16 + 4 + 4 + 16;
+	int len = (request_len + FREQ_RESPONSE_PAD) / 8;
+	txbuf += offset;
+
+	if (len + offset > size) {
+		applog(LOG_DEBUG, "KnC SPI buffer full");
+		return -1;
+	}
+
+	if (freq > 1000000)
+		freq = freq / 1000000;  // Assume Hz was given instead of MHz
+
+	memset(txbuf, 0, len);
+	txbuf[0] = 2 << 4 | ((len * 8) >> 8);
+	txbuf[1] = (len * 8) >> 0;
+	txbuf[2] = ((channel+1) << 4)  | (die << 0);
+	txbuf[3] = (freq >> 8);
+	txbuf[4] = (freq >> 0);
+
+	return len;
+}
+
+int knc_decode_freq(uint8_t *response)
+{
+	/* 4'op=2, 12'length, 4'bus, 4'die, 16'freq, many more clocks */
+	int request_len = 4 + 12 + 16 + 4 + 4 + 16;
+	int len = (request_len + FREQ_RESPONSE_PAD) / 8;
+
+	int i;
+	int freq = -1;
+	for (i = request_len / 8; i < len-1; i++) {
+		if (response[i] == 0xf1) {
+			break;
+		} else if (response[i] == 0xf0) {
+			freq = response[i+1]<<8 | response[i+2];
+			applog(LOG_DEBUG, "KnC: Accepted FREQ=%d", freq);
+			i+=2;
+		}
+	}
+	if (response[i] == 0xf1) {
+		applog(LOG_INFO, "KnC: Frequency change successful, FREQ=%d", freq);
+		return freq;
+	} else {
+		applog(LOG_ERR, "KnC: Frequency change FAILED!");
+		return -1;
+	}
 }
 
 /* request_length = 0 disables communication checks, i.e. Jupiter protocol */

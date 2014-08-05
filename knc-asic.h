@@ -89,6 +89,10 @@ struct knc_spimux_status
 int knc_prepare_status(uint8_t *txbuf, int offset, int size, int channel);
 int knc_decode_status(uint8_t *response, struct knc_spimux_status *status);
 
+/* controller ASIC clock configuration */
+int knc_prepare_freq(uint8_t *txbuf, int offset, int size, int channel, int die, int freq);
+int knc_decode_freq(uint8_t *response);
+
 /* Detect ASIC DIE version */
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);
 
