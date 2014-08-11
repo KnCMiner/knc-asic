@@ -32,27 +32,27 @@
 /* Control Commands
  *
  * SPI command on channel. 1-
- *   1'b1 3'channel 12'msglen_in_bits SPI message data
+ *   4'd8 4'channel 8'msglen_in_bytes SPI message data
  * Sends the supplied message on selected SPI bus
  *
  * Channel status
- *   4'op=3, 3'channel, 9'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die)
+ *   4'd3, 4'channel, 8'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die)
  * request information about a channel
  * 
  * Communication test
- *   16'h1 16'x
+ *   16'h0001 16'x
  * Simple test of SPI communication
  *
  * LED control
- *   4'h1 4'red 4'green 4'blue
+ *   4'd1 4'red 4'green 4'blue
  * Sets led colour
  *
  * Clock frequency
- *   4'h2 12'msglen_in_bits 4'channel 4'die 16'MHz 512'x
+ *   4'd2 4'channel 8'msglen_in_bytes 4'die 16'MHz 512'x
  * Configures the hashing clock rate
  *
  * Reset controller
- *   4'h0002
+ *   16'h0002
  * Reset the controller.
  */
 
@@ -353,8 +353,8 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 		applog(LOG_DEBUG, "KnC SPI buffer full");
 		return -1;
 	}
-	txbuf[0] = 1 << 7 | (channel+1) << 4 | (msglen * 8) >> 8;
-	txbuf[1] = (msglen * 8);
+	txbuf[0] = 8 << 4 | (channel + 1);
+	txbuf[1] = msglen;
 	knc_prepare_neptune_message(request_length, request, txbuf+2);
 
 	return offset + len;
@@ -411,7 +411,7 @@ int knc_prepare_status(uint8_t *txbuf, int offset, int size, int channel)
 	}
 
 	memset(txbuf, 0, len);
-	txbuf[0] = 3 << 4 | (channel + 1) << 1;
+	txbuf[0] = 3 << 4 | (channel + 1);
 
 	return len;
 }
@@ -448,7 +448,7 @@ int knc_prepare_freq(uint8_t *txbuf, int offset, int size, int channel, int die,
 	int len = (request_len + FREQ_RESPONSE_PAD) / 8;
 	txbuf += offset;
 
-	if (len + offset > size) {
+	if (2 + len + offset > size) {
 		applog(LOG_DEBUG, "KnC SPI buffer full");
 		return -1;
 	}
@@ -457,9 +457,9 @@ int knc_prepare_freq(uint8_t *txbuf, int offset, int size, int channel, int die,
 		freq = freq / 1000000;  // Assume Hz was given instead of MHz
 
 	memset(txbuf, 0, len);
-	txbuf[0] = 2 << 4 | ((len * 8) >> 8);
-	txbuf[1] = (len * 8) >> 0;
-	txbuf[2] = ((channel+1) << 4)  | (die << 0);
+	txbuf[0] = 2 << 4 | (channel + 1);
+	txbuf[1] = len;
+	txbuf[2] = (die << 0);
 	txbuf[3] = (freq >> 8);
 	txbuf[4] = (freq >> 0);
 
