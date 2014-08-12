@@ -19,6 +19,7 @@
 #include <linux/spi/spidev.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdio.h>
 
 #include <zlib.h>
 
