@@ -361,7 +361,6 @@ void usage(char *program_name)
 }
 int main(int argc, char **argv)
 {
-	void *ctx = knc_trnsp_new(0);
 	int channel, die;
 	char *command;
 	char **args = &argv[1];
@@ -386,6 +385,10 @@ int main(int argc, char **argv)
 		usage(argv[0]);
 		exit(1);
 	}
+
+	void *ctx = knc_trnsp_new(0);
+	if (!ctx)
+		exit(1);
 
 	command = *args++; argc--;
 	{
