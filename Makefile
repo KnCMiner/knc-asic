@@ -8,9 +8,9 @@ BINARIES = asic knc-serial io-pwr knc-led
 
 all: $(BINARIES) waas
 
-asic: knc-asic.o knc-transport-spi.o logging.o
+asic: knc-asic.o knc-transport-spimux.o logging.o
 
-knc-led: knc-asic.o knc-transport-spi.o logging.o
+knc-led: knc-asic.o knc-transport-spimux.o logging.o
 
 io-pwr: i2c.o tps65217.o
 
