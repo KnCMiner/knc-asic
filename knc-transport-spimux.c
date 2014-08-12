@@ -151,21 +151,3 @@ void knc_trnsp_periodic_check(UNUSED void *opaque_ctx)
 {
 	return;
 }
-
-void knc_trnsp_disable_core(UNUSED void *opaque_ctx, uint8_t asic, uint8_t core)
-{
-	char str[256];
-
-	snprintf(str, sizeof(str), "i2cset -y 2 0x2%hhu %hhu 0", asic, core);
-	if (0 != WEXITSTATUS(system(str)))
-		applog(LOG_ERR, "KnC: system call failed");
-}
-
-void knc_trnsp_enable_core(UNUSED void *opaque_ctx, uint8_t asic, uint8_t core)
-{
-	char str[256];
-
-	snprintf(str, sizeof(str), "i2cset -y 2 0x2%hhu %hhu 1", asic, core);
-	if (0 != WEXITSTATUS(system(str)))
-		applog(LOG_ERR, "KnC: system call failed");
-}

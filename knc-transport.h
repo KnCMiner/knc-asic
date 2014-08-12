@@ -20,8 +20,6 @@ void knc_trnsp_free(void *opaque_ctx);
 int knc_trnsp_transfer(void *opaque_ctx, const uint8_t *txbuf, uint8_t *rxbuf, int len);
 bool knc_trnsp_asic_detect(void *opaque_ctx, int chip_id);
 void knc_trnsp_periodic_check(void *opaque_ctx);
-void knc_trnsp_disable_core(void *opaque_ctx, uint8_t asic, uint8_t core);
-void knc_trnsp_enable_core(void *opaque_ctx, uint8_t asic, uint8_t core);
 
 /* API */
 #ifdef USE_KNC_TRANSPORT_FTDI
