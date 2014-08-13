@@ -21,9 +21,9 @@
 #define KNC_ASIC_VERSION_NEPTUNE            0xa002
 
 /* Limits of current chips & I/O board */
-#define KNC_MAX_CORES_PER_DIE	360
-#define KNC_MAX_ASICS 6
-#define KNC_MAX_DIES_PER_ASIC	4
+#define KNC_MAX_ASICS			6
+#define KNC_DIES_PER_ASIC		4
+#define KNC_MAX_CORES_PER_DIE		360
 
 struct knc_die_info {
 	enum {
