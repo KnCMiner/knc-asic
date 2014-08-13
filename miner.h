@@ -2,6 +2,7 @@
 #define _CGMINER_MINER_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct work {
 	uint8_t *midstate;
@@ -15,8 +16,4 @@ struct work {
 #define MIN(a,b) ((a) > (b) ? (b) : (a))
 #endif
 
-typedef enum {
-	false = 0,
-	true = 1
-} bool;
 #endif
