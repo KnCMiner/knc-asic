@@ -48,6 +48,8 @@
 #include "pmbus.h"
 #include "lm75.h"
 
+#include "knc-asic.h"
+
 #include "knc-transport.h"
 
 #define	DEFAULT_CONFIG_FILE	"/config/advanced.conf"
@@ -242,42 +244,22 @@ static int read_die_freq(int asic, int die)
 
 static void do_freq(void *ctx, int channel, int die, int freq)
 {
-	/* 4'op=2, 12'length, 4'bus, 4'die, 16'freq, many more clocks */
-	int request_len = 4 + 12 + 16 + 4 + 4 + 16;
-	int len = (request_len + 1000) / 8;
-	uint8_t request[len];
-	uint8_t response[len];
+	uint8_t request[2048];
+	uint8_t response[2048];
 
-	if (freq > 1000000)
-		freq = freq / 1000000;  // Assume Hz was given instead of MHz
 
-	memset(request, 0, sizeof(request));
-	request[0] = 2 << 4 | ((len * 8) >> 8);
-	request[1] = (len * 8) >> 0;
-	request[2] = ((channel+1) << 4)  | (die << 0);
-	request[3] = (freq >> 8);
-	request[4] = (freq >> 0);
+	int len = knc_prepare_freq(request, 0, sizeof(request), channel, die, freq);
 
 	knc_trnsp_transfer(ctx, request, response, len);
 
-	int i;
-	for (i = request_len / 8; i < len-1; i++) {
-		if (response[i] == 0xf1) {
-			break;
-		} else if (response[i] == 0xf0) {
+	int accepted = knc_decode_freq(response);
+
 #ifdef DEBUG_INFO
-			printf("KnC %d-%d: Accepted FREQ=%d\n", channel, die, response[i+1]<<8 | response[i+2]);
+	if (accepted > 0)
+		printf("KnC %d-%d: Accepted FREQ=%d\n", channel, die, accepted);
 #endif /* DEBUG_INFO */
-			i+=2;
-		}
-	}
-	if (response[i] == 0xf1) {
-#ifdef DEBUG_INFO
-		printf("KnC %d-%d: Frequency change successful\n", channel, die);
-#endif /* DEBUG_INFO */
-	} else {
+	if (accepted < 0)
 		fprintf(stderr, "KnC %d-%d: Frequency change FAILED!", channel, die);
-	}
 }
 
 static bool set_die_freq(int asic, int die, int freq)
