@@ -22,7 +22,7 @@
 
 /* Limits of current chips & I/O board */
 #define KNC_MAX_ASICS			6
-#define KNC_DIES_PER_ASIC		4
+#define KNC_MAX_DIES_PER_ASIC		4
 #define KNC_MAX_CORES_PER_DIE		360
 
 struct knc_die_info {
@@ -60,6 +60,8 @@ int knc_prepare_jupiter_setwork(uint8_t *request, int die, int core, int slot, s
 int knc_prepare_jupiter_halt(uint8_t *request, int die, int core);
 int knc_prepare_neptune_halt(uint8_t *request, int die, int core);
 
+int knc_check_response(uint8_t *response, int response_length, uint8_t ack);
+
 int knc_decode_info(uint8_t *response, struct knc_die_info *die_info);
 int knc_decode_report(uint8_t *response, struct knc_report *report, int version);
 
@@ -77,6 +79,9 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, int response_length);
 int knc_syncronous_transfer(void *ctx, int channel, int request_length, const uint8_t *request, int response_length, uint8_t *response);
 
+/* Detect ASIC DIE version */
+int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);
+
 /* Controller channel status */
 struct knc_spimux_status
 {
@@ -92,9 +97,6 @@ int knc_decode_status(uint8_t *response, struct knc_spimux_status *status);
 /* controller ASIC clock configuration */
 int knc_prepare_freq(uint8_t *txbuf, int offset, int size, int channel, int die, int freq);
 int knc_decode_freq(uint8_t *response);
-
-/* Detect ASIC DIE version */
-int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);
 
 /* red, green, blue valid range 0 - 15. No response or checksum from controller */
 int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, int blue);
