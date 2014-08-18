@@ -41,23 +41,41 @@
  * CRC32        32 bits (Neptune)
  * STATUS       8 bits   1 0 ~CRC_OK 0 0 ACCEPTED_WORK 0 1 (Neptune)
  *
- * Requests
+ * Work Submission
+ * ===============
  *
- * SETWORK (Jupiter)
+ * 0x81 SETWORK (Jupiter)
+ * ----------------------
+ *
+ * slot | 0xf0  8 bits
  * midstate     256 bits
  * data         96 bits
  *
- * SETWORK/SETWORK_CLEAN (Neptune)
+ * No response
+ *
+ * 0x81 SETWORK (Neptune)
+ * 0x83 SETWORK_CLEAN (Neptune)
+ * -------------------------------------------
+ *
  * slot | 0xf0  8 bits
  * precalc_midstate  192 bits
  * precalc_data 96 bits
  * midstate     256 bits
  *
- * Returns REPORT response on Neptune
+ * SETWORK_CLEAN replaces any current work
  *
- * Responses
+ * Returns REPORT response
  *
- * GETINFO
+ * 0x83 HALT (Jupiter)
+ * -------------------
+ *
+ * tells the core to discard current work
+ *
+ * Status queries
+ * ==============
+ *
+ * 0x80 GETINFO
+ * ------------
  *
  * (core field unused)
  *
@@ -73,7 +91,8 @@
  *                              1' want_work 
  *				1' has_report (unreliable)
  *
- * REPORT
+ * 0x82 REPORT
+ * -----------
  *
  * reserved     2 bits
  * next_state   1 bit   next work state loaded

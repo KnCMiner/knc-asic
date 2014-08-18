@@ -36,14 +36,7 @@
  *   4'd8 4'channel 8'msglen_in_bytes SPI message data
  * Sends the supplied message on selected SPI bus
  *
- * Channel status
- *   4'd3, 4'channel, 8'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die)
- * request information about a channel
- * 
- * Communication test
- *   16'h0001 16'x
- * Simple test of SPI communication
- *
+ * Reset the controller.
  * LED control
  *   4'd1 4'red 4'green 4'blue
  * Sets led colour
@@ -52,9 +45,18 @@
  *   4'd2 4'channel 8'msglen_in_bytes 4'die 16'MHz 512'x
  * Configures the hashing clock rate
  *
+ * Channel status
+ *   4'd3, 4'channel, 8'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die)
+ * request information about a channel
+ * 
+ * Communication test
+ *   16'h0001 16'x
+ * Simple test of SPI communication
+ *
  * Reset controller
  *   16'h0002
- * Reset the controller.
+ * Reset the SPI MUX controller
+ *
  */
 
 int knc_transfer_length(int request_length, int response_length)
