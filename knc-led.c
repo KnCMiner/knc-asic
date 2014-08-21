@@ -10,16 +10,23 @@
 
 int main(int argc, char **argv)
 {
-	void *ctx = knc_trnsp_new(0);
+	void *ctx;
 	char **args = &argv[1];
+	const char *devname = NULL;
 	
-	if (argc > 1 && strcmp(*args, "-d") == 0)  {
-		argc--;
-		args++;
-		debug_level = LOG_DEBUG;
+	for (;argc > 1 && *args[0] == '-'; argc--, args++) {
+		if (strcmp(*args, "-i") == 0 && argc > 1)  {
+			argc--;
+			devname = args[1];
+			continue;
+		}
+		if (strcmp(*args, "-d") == 0)
+			debug_level = LOG_DEBUG;
 	}
+
 	if (argc != 4) {
-		fprintf(stderr, "Usage: %s red green blue\n", argv[0]);
+		fprintf(stderr, "Usage: %s [options] red green blue\n", argv[0]);
+		fprintf(stderr, "	-i devname	Name of the transport device\n");
 		exit(1);
 	}
 
@@ -28,6 +35,11 @@ int main(int argc, char **argv)
 	uint32_t green = strtoul(*args++, NULL, 0);
 	uint32_t blue = strtoul(*args++, NULL, 0);
 	int len = knc_prepare_led(request, 0, sizeof(request), red, green, blue);
+	ctx = knc_trnsp_new(devname);
+	if (!ctx) {
+		fprintf(stderr, "ERROR: Failed to open transport device\n");
+		exit(1);
+	}
 	knc_trnsp_transfer(ctx, request, response, len);
 
 	knc_trnsp_free(ctx);
