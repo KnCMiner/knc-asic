@@ -15,7 +15,9 @@
 #define	PWR_EN_FILE_RPI		"/sys/class/gpio/gpio24/direction"
 #define	DCDC_RESET_FILE_RPI	"/sys/class/gpio/gpio23/direction"
 
-bool test_tps65217(int i2c_bus)
+static bool reset_dcdc(int i2c_bus, bool on);
+
+static bool test_tps65217_once(int i2c_bus)
 {
 	int id, rev, status;
 	char modification;
@@ -52,6 +54,17 @@ bool test_tps65217(int i2c_bus)
 	printf("TPS65217 OK. Modification %c, revision 1.%d\n",
 	       modification, rev);
 	return true;
+}
+
+bool test_tps65217(int i2c_bus)
+{
+	if (test_tps65217_once(i2c_bus))
+		return true;
+	/* Maybe we are in a strange state, where I2C is locked? */
+	fprintf(stderr, "Trying to reset TPS65217...\n");
+	reset_dcdc(i2c_bus, true);
+	usleep(100000);
+	return test_tps65217_once(i2c_bus);
 }
 
 static void tps65217_write_level1_reg(int i2c_bus, uint8_t reg, uint8_t value)
