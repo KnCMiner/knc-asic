@@ -17,11 +17,13 @@
 #include "i2c.h"
 
 static int opt_verbose = 0;
+static int opt_bitbang = 0;
 
 static void print_usage(const char *prog)
 {
 	printf("Usage: %s [-v] [command,..]\n", prog);
 	puts("  -v --verbose  Verbose operation\n"
+	     "  -b --bitbang  Use bitbang GPIO for I2C\n"
 	     "  init          Initialize I/O power\n"
 	);
 	exit(1);
@@ -31,12 +33,13 @@ static void parse_opts(int argc, char *argv[])
 {
 	while (1) {
 		static const struct option lopts[] = {
+			{ "bitbang",  0, 0, 'b' },
 			{ "verbose",  0, 0, 'v' },
 			{ NULL, 0, 0, 0 },
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "v", lopts, NULL);
+		c = getopt_long(argc, argv, "vb", lopts, NULL);
 
 		if (c == -1)
 			break;
@@ -44,6 +47,9 @@ static void parse_opts(int argc, char *argv[])
 		switch (c) {
 		case 'v':
 			opt_verbose = 1;
+			break;
+		case 'b':
+			opt_bitbang = 1;
 			break;
 		default:
 			print_usage(argv[0]);
@@ -54,9 +60,13 @@ static void parse_opts(int argc, char *argv[])
 
 static int io_pwr_init(void)
 {
-	int i2c_bus = i2c_connect(TPS65217_BUS_NUM);
+	int i2c_bus = -1;
+	if (!opt_bitbang) {
+		if (0 > (i2c_bus = i2c_connect(TPS65217_BUS_NUM)))
+			exit(1);
+		i2c_set_slave_device_addr(i2c_bus, TPS65217_BUS_ADDRESS);
+	}
 
-	i2c_set_slave_device_addr(i2c_bus, TPS65217_BUS_ADDRESS);
 	if (opt_verbose) fprintf(stderr, "Testing TPS65217\n");
 	if(!test_tps65217(i2c_bus)) {
 		fprintf(stderr, "TPS65217 TEST failure\n");
@@ -74,7 +84,8 @@ static int io_pwr_init(void)
 		return 1;
 	} } }
 
-	i2c_disconnect(i2c_bus);
+	if (0 <= i2c_bus)
+		i2c_disconnect(i2c_bus);
 	if (opt_verbose) fprintf(stderr, "TPS65217 successfully initialized\n");
 
 	return 0;

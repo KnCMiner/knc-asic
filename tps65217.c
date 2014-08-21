@@ -8,15 +8,19 @@
 #include "i2c.h"
 #include "tps65217.h"
 
-#define	PWR_EN_FILE	"/sys/class/gpio/gpio49/direction"
-#define	DCDC_RESET_FILE	"/sys/class/gpio/gpio76/direction"
+/* BeagleBone Black */
+#define	PWR_EN_FILE_BBB		"/sys/class/gpio/gpio49/direction"
+#define	DCDC_RESET_FILE_BBB	"/sys/class/gpio/gpio76/direction"
+/* Raspberry Pi */
+#define	PWR_EN_FILE_RPI		"/sys/class/gpio/gpio24/direction"
+#define	DCDC_RESET_FILE_RPI	"/sys/class/gpio/gpio23/direction"
 
 bool test_tps65217(int i2c_bus)
 {
 	int id, rev, status;
 	char modification;
 	
-	id = i2c_smbus_read_byte_data(i2c_bus, TPS65217_CHIPID);
+	id = I2C_read_byte_data(i2c_bus, TPS65217_CHIPID);
 	switch (id >> 4) {
 		case 0x7:
 			modification = 'A';
@@ -36,7 +40,7 @@ bool test_tps65217(int i2c_bus)
 	}
 	rev = id & 0x0F;
 
-	status = i2c_smbus_read_byte_data(i2c_bus, TPS65217_STATUS);
+	status = I2C_read_byte_data(i2c_bus, TPS65217_STATUS);
 	if ( (!(status & TPS65217_STATUS_BIT_ACPWR)) ||
 	     (status & TPS65217_STATUS_BIT_USBPWR) ||
 	     (status & TPS65217_STATUS_BIT_OFF)
@@ -52,28 +56,31 @@ bool test_tps65217(int i2c_bus)
 
 static void tps65217_write_level1_reg(int i2c_bus, uint8_t reg, uint8_t value)
 {
-	i2c_smbus_write_byte_data(i2c_bus, TPS65217_PASSWORD,
-				  TPS65217_PASSWORD_VALUE ^ reg);
-	i2c_smbus_write_byte_data(i2c_bus, reg, value);
+	I2C_write_byte_data(i2c_bus, TPS65217_PASSWORD, TPS65217_PASSWORD_VALUE ^ reg);
+	I2C_write_byte_data(i2c_bus, reg, value);
 }
 
 static void tps65217_write_level2_reg(int i2c_bus, uint8_t reg, uint8_t value)
 {
-	i2c_smbus_write_byte_data(i2c_bus, TPS65217_PASSWORD,
-				  TPS65217_PASSWORD_VALUE ^ reg);
-	i2c_smbus_write_byte_data(i2c_bus, reg, value);
-	i2c_smbus_write_byte_data(i2c_bus, TPS65217_PASSWORD,
-				  TPS65217_PASSWORD_VALUE ^ reg);
-	i2c_smbus_write_byte_data(i2c_bus, reg, value);
+	I2C_write_byte_data(i2c_bus, TPS65217_PASSWORD, TPS65217_PASSWORD_VALUE ^ reg);
+	I2C_write_byte_data(i2c_bus, reg, value);
+	I2C_write_byte_data(i2c_bus, TPS65217_PASSWORD, TPS65217_PASSWORD_VALUE ^ reg);
+	I2C_write_byte_data(i2c_bus, reg, value);
 }
 
-static bool reset_dcdc(bool on)
+static bool reset_dcdc(int i2c_bus, bool on)
 {
 	int fd, exp_cnt, cnt;
+	char *fname;
 
-	if (0 > (fd = open(DCDC_RESET_FILE, O_RDWR))) {
+	if (0 > i2c_bus)
+		fname = DCDC_RESET_FILE_RPI;
+	else
+		fname = DCDC_RESET_FILE_BBB;
+
+	if (0 > (fd = open(fname, O_RDWR))) {
 		fprintf(stderr,
-			"Can not open "DCDC_RESET_FILE": %m\n");
+			"Can not open %s: %m\n", fname);
 		return false;		
 	}
 	
@@ -90,13 +97,19 @@ static bool reset_dcdc(bool on)
 	return (cnt == exp_cnt);
 }
 
-static bool pwren_dcdc(bool on)
+static bool pwren_dcdc(int i2c_bus, bool on)
 {
 	int fd, exp_cnt, cnt;
+	char *fname;
 
-	if (0 > (fd = open(PWR_EN_FILE, O_RDWR))) {
+	if (0 > i2c_bus)
+		fname = PWR_EN_FILE_RPI;
+	else
+		fname = PWR_EN_FILE_BBB;
+
+	if (0 > (fd = open(fname, O_RDWR))) {
 		fprintf(stderr,
-			"Can not open "PWR_EN_FILE": %m\n");
+			"Can not open %s: %m\n", fname);
 		return false;		
 	}
 	
@@ -121,23 +134,24 @@ bool configure_tps65217(int i2c_bus)
 	int cnt = 0;
 	int data;
 	int fd;
+	char *fname;
 
 	power_down_spi_connector(i2c_bus);
 	usleep(100000);
-	pwren_dcdc(false);
+	pwren_dcdc(i2c_bus, false);
 	usleep(500000);
 
 	/* Synchronize to the beginning of 6-second reset cycle */
-	reset_dcdc(true);
+	reset_dcdc(i2c_bus, true);
 	sleep(1);
-	reset_dcdc(false);
+	reset_dcdc(i2c_bus, false);
 	sleep(1);
 
  	/* Synchronize to the beginning of 6-second reset cycle */
-	i2c_smbus_write_byte_data(i2c_bus, TPS65217_MUXCTRL, 0x07);
+	I2C_write_byte_data(i2c_bus, TPS65217_MUXCTRL, 0x07);
 	/* Wait for the register to reset, but no more than 6 seconds */
  	gettimeofday(&start, NULL);
-	while (0x07 == i2c_smbus_read_byte_data(i2c_bus, TPS65217_MUXCTRL)) {
+	while (0x07 == I2C_read_byte_data(i2c_bus, TPS65217_MUXCTRL)) {
 		gettimeofday(&start, NULL);
 		if (0 == usleep(100000)) /* if not interrupted by signal */
 			++cnt;
@@ -147,8 +161,8 @@ bool configure_tps65217(int i2c_bus)
 	/* Reset cycle boundary found. Check that it is not a mere communication
 	 * error.
 	 */
-	i2c_smbus_write_byte_data(i2c_bus, TPS65217_MUXCTRL, 0x05);
-	if (0x05 != i2c_smbus_read_byte_data(i2c_bus, TPS65217_MUXCTRL))
+	I2C_write_byte_data(i2c_bus, TPS65217_MUXCTRL, 0x05);
+	if (0x05 != I2C_read_byte_data(i2c_bus, TPS65217_MUXCTRL))
 		return false;
 
 	/* Configure the device */
@@ -176,49 +190,49 @@ bool configure_tps65217(int i2c_bus)
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, TPS65217_ENABLE_VALUE);
 
 	/* Check the configuration */
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
 	if ((data ^ DEFAULT_SPI_VOLTAGE) & 0xBF) {
 		fprintf(stderr, "Wrong DEFDCDC1 value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFDCDC2);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFDCDC2);
 	if ((data ^ TPS65217_DEFDCDC_VALUE_3_3V) & 0xBF) {
 		fprintf(stderr, "Wrong DEFDCDC1 value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFDCDC3);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFDCDC3);
 	if ((data ^ TPS65217_DEFDCDC_VALUE_1_2V) & 0xBF) {
 		fprintf(stderr, "Wrong DEFDCDC3 value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFSLEW);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFSLEW);
 	if ((data ^ TPS65217_DEFSLEW_GO_FAST) & 0x7F) {
 		fprintf(stderr, "Wrong DEFSLEW value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFLDO1);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFLDO1);
 	if ((data ^ TPS65217_DEFLDO1_VALUE_2_5V) & 0x0F) {
 		fprintf(stderr, "Wrong DEFLDO1 value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFLDO2);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFLDO2);
 	if ((data ^ TPS65217_DEFLDO2_VALUE_1_2V) & 0x7F) {
 		fprintf(stderr, "Wrong DEFLDO2 value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFLDO3);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFLDO3);
 	if ((data ^ TPS65217_DEFLDO3_VALUE_LS_3_3V) & 0x3F) {
 		fprintf(stderr, "Wrong DEFLDO3 value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFLDO4);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFLDO4);
 #ifdef NOT_REAL_ASIC_BUT_FPGA
 	if ((data ^ TPS65217_DEFLDO4_VALUE_LDO_2_5V) & 0x3F) {
 #else /* real ASIC board */
@@ -233,9 +247,14 @@ bool configure_tps65217(int i2c_bus)
 	if (!power_down_spi_connector(i2c_bus))
 		return false;
 
-	if (0 > (fd = open(PWR_EN_FILE, O_RDWR))) {
+	if (0 > i2c_bus)
+		fname = PWR_EN_FILE_RPI;
+	else
+		fname = PWR_EN_FILE_BBB;
+
+	if (0 > (fd = open(fname, O_RDWR))) {
 		fprintf(stderr,
-			"Can not open "PWR_EN_FILE": %m\n");
+			"Can not open %s: %m\n", fname);
 		return false;		
 	}
 
@@ -265,7 +284,7 @@ bool configure_tps65217(int i2c_bus)
 	close(fd);
 	if (4 != cnt) {
 		fprintf(stderr,
-			"Write failed to "PWR_EN_FILE"\n");
+			"Write failed to %s\n", fname);
 		return false;	
 	}
 
@@ -274,7 +293,7 @@ bool configure_tps65217(int i2c_bus)
 	
 	/* Wait for the POWER GOOD indication */
 	cnt = 0;
-	while (0x7F != (0x7F & i2c_smbus_read_byte_data(i2c_bus, TPS65217_PGOOD))) {
+	while (0x7F != (0x7F & I2C_read_byte_data(i2c_bus, TPS65217_PGOOD))) {
 		if (0 == usleep(1000)) /* if not interrupted by signal */
 			++cnt;
 		if (cnt > 100) {
@@ -291,7 +310,7 @@ bool power_down_spi_connector(int i2c_bus)
 	int data, read_data;
 
 	/* Disable LDO4 = 1V8A */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read ENABLE register\n");
 		return false;		
@@ -300,14 +319,14 @@ bool power_down_spi_connector(int i2c_bus)
 	data = read_data & (~TPS65217_ENABLE_LDO4);
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if ((data ^ read_data) & 0x7F) {
 		fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
 		return false;		
 	}
 
 	/* Disable LDO4 in Sequencer */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_SEQ4);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_SEQ4);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read SEQ4 register\n");
 		return false;		
@@ -316,7 +335,7 @@ bool power_down_spi_connector(int i2c_bus)
 	data = read_data & (~(TPS65217_SEQ4_LDO4_MASK));
 	tps65217_write_level1_reg(i2c_bus, TPS65217_SEQ4, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_SEQ4);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_SEQ4);
 	if ((data ^ read_data) & TPS65217_SEQ4_MASK) {
 		fprintf(stderr, "Wrong SEQ4 value 0x%02X\n", read_data);
 		return false;		
@@ -325,7 +344,7 @@ bool power_down_spi_connector(int i2c_bus)
 	usleep(100000);
 
 	/* Disable DCDC1 = 1V8 */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read ENABLE register\n");
 		return false;		
@@ -334,14 +353,14 @@ bool power_down_spi_connector(int i2c_bus)
 	data = read_data & (~(TPS65217_ENABLE_LDO4 | TPS65217_ENABLE_DCDC1));
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if ((data ^ read_data) & 0x7F) {
 		fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
 		return false;		
 	}
 
 	/* Disable DCDC1 in Sequencer */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_SEQ1);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_SEQ1);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read SEQ1 register\n");
 		return false;		
@@ -350,7 +369,7 @@ bool power_down_spi_connector(int i2c_bus)
 	data = read_data & (~(TPS65217_SEQ1_DCDC1_MASK));
 	tps65217_write_level1_reg(i2c_bus, TPS65217_SEQ1, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_SEQ1);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_SEQ1);
 	if ((data ^ read_data) & TPS65217_SEQ1_MASK) {
 		fprintf(stderr, "Wrong SEQ1 value 0x%02X\n", read_data);
 		return false;		
@@ -359,7 +378,7 @@ bool power_down_spi_connector(int i2c_bus)
 	usleep(100000);
 
 	/* Disable LDO3 = 3V3 */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read ENABLE register\n");
 		return false;		
@@ -369,14 +388,14 @@ bool power_down_spi_connector(int i2c_bus)
 			      TPS65217_ENABLE_DCDC1));
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if ((data ^ read_data) & 0x7F) {
 		fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
 		return false;		
 	}
 
 	/* Disable LDO3 in Sequencer */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_SEQ3);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_SEQ3);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read SEQ3 register\n");
 		return false;		
@@ -385,7 +404,7 @@ bool power_down_spi_connector(int i2c_bus)
 	data = read_data & (~(TPS65217_SEQ3_LDO3_MASK));
 	tps65217_write_level1_reg(i2c_bus, TPS65217_SEQ3, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_SEQ3);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_SEQ3);
 	if ((data ^ read_data) & TPS65217_SEQ3_MASK) {
 		fprintf(stderr, "Wrong SEQ3 value 0x%02X\n", read_data);
 		return false;		
@@ -399,7 +418,7 @@ bool power_up_spi_connector(int i2c_bus)
 	int data, read_data;
 
 	/* Enable LDO3 = 3V3 */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read ENABLE register\n");
 		return false;		
@@ -408,7 +427,7 @@ bool power_up_spi_connector(int i2c_bus)
 	data = read_data | TPS65217_ENABLE_LDO3;
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if ((data ^ read_data) & 0x7F) {
 		fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
 		return false;		
@@ -417,7 +436,7 @@ bool power_up_spi_connector(int i2c_bus)
 	usleep(100000);
 
 	/* Enable DCDC1 = 1V8 */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read ENABLE register\n");
 		return false;		
@@ -426,7 +445,7 @@ bool power_up_spi_connector(int i2c_bus)
 	data = read_data | (TPS65217_ENABLE_DCDC1 | TPS65217_ENABLE_LDO3);
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if ((data ^ read_data) & 0x7F) {
 		fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
 		return false;		
@@ -435,7 +454,7 @@ bool power_up_spi_connector(int i2c_bus)
 	usleep(100000);
 
 	/* Enable LDO4 = 1V8A */
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if (0 > read_data) {
 		fprintf(stderr, "Can not read ENABLE register\n");
 		return false;		
@@ -445,7 +464,7 @@ bool power_up_spi_connector(int i2c_bus)
 			    TPS65217_ENABLE_LDO4);
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
-	read_data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_ENABLE);
+	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
 	if ((data ^ read_data) & 0x7F) {
 		fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
 		return false;		
@@ -458,7 +477,7 @@ bool power_up_spi_connector(int i2c_bus)
 
 int tps65217_get_digital_SPI_voltage(int i2c_bus)
 {
-	return i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
+	return I2C_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
 }
 
 bool tps65217_set_digital_SPI_voltage(int i2c_bus, int voltage)
@@ -466,7 +485,7 @@ bool tps65217_set_digital_SPI_voltage(int i2c_bus, int voltage)
 	int data;
 	FILE *f;
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
 	if (!((data ^ voltage) & 0xBF))
 		return true;
 
@@ -481,13 +500,13 @@ bool tps65217_set_digital_SPI_voltage(int i2c_bus, int voltage)
 	tps65217_write_level2_reg(i2c_bus, TPS65217_DEFSLEW,
 				  TPS65217_DEFSLEW_GO_FAST);
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
 	if ((data ^ voltage) & 0xBF) {
 		fprintf(stderr, "Wrong DEFDCDC1 value 0x%02X\n", data);
 		return false;		
 	}
 
-	data = i2c_smbus_read_byte_data(i2c_bus, TPS65217_DEFSLEW);
+	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFSLEW);
 	if ((data ^ TPS65217_DEFSLEW_GO_FAST) & 0x7F) {
 		fprintf(stderr, "Wrong DEFSLEW value 0x%02X\n", data);
 		return false;		
