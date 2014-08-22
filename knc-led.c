@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 	for (;argc > 1 && *args[0] == '-'; argc--, args++) {
 		if (strcmp(*args, "-i") == 0 && argc > 1)  {
 			argc--;
-			devname = args[1];
+			devname = *(++args);
 			continue;
 		}
 		if (strcmp(*args, "-d") == 0)
