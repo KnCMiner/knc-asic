@@ -2,10 +2,10 @@
 
 PATH="${PATH}:."
 
-nCONFIG="/sys/class/gpio/gpio67/value"
-CONFIG_DONE="/sys/class/gpio/gpio66/value"
-nSTATUS="/sys/class/gpio/gpio69/value"
-SPI="/dev/spidev1.0"
+nCONFIG="/sys/class/gpio/gpio13/value"
+CONFIG_DONE="/sys/class/gpio/gpio26/value"
+nSTATUS="/sys/class/gpio/gpio21/value"
+SPI="/dev/spidev0.0"
 CODE="${1:-spimux.rbf}"
 
 ioget() {
@@ -28,10 +28,10 @@ iocheck() {
 }
 
 # Remove I2C MUX if present
-echo 2-0070 > /sys/bus/i2c/drivers/pca954x/unbind 2>/dev/null
+echo 1-0070 > /sys/bus/i2c/drivers/pca954x/unbind 2>/dev/null
 
 # Configure SPI parameters
-spi-test -OHC -s 5000000 -b 8 -D /dev/spidev1.0 -q 00
+spi-test -C -s 5000000 -b 8 -D $SPI -q 00
 
 # Reset FPGA
 ioset nCONFIG 0
@@ -52,11 +52,11 @@ iocheck CONFIG_DONE 1 when nCONFIG is HIGH
 
 
 # Enable i2c MUX
-echo 2-0070 > /sys/bus/i2c/drivers_probe
+echo 1-0070 > /sys/bus/i2c/drivers_probe
 
 # Configure LCD
 lcd-message --init -l 2 $(basename $CODE .rbf | sed -e 's/_bitrev//' -e 's/_pad//' ) 2>/dev/null
 
 
 # Allow user access to needed devices
-chmod a+rw /dev/spidev1.0  /dev/i2c-* /sys/bus/i2c/devices/*/eeprom
+chmod a+rw $SPI /dev/i2c-* /sys/bus/i2c/devices/*/eeprom
