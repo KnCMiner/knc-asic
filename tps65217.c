@@ -86,10 +86,10 @@ static bool reset_dcdc(int i2c_bus, bool on)
 	int fd, exp_cnt, cnt;
 	char *fname;
 
-	if (0 > i2c_bus)
-		fname = DCDC_RESET_FILE_RPI;
-	else
-		fname = DCDC_RESET_FILE_BBB;
+	// Hack to get rid of compiler error due to unused variable.
+	cnt = i2c_bus;
+
+	fname = DCDC_RESET_FILE_RPI;
 
 	if (0 > (fd = open(fname, O_RDWR))) {
 		fprintf(stderr,
@@ -115,10 +115,10 @@ static bool pwren_dcdc(int i2c_bus, bool on)
 	int fd, exp_cnt, cnt;
 	char *fname;
 
-	if (0 > i2c_bus)
-		fname = PWR_EN_FILE_RPI;
-	else
-		fname = PWR_EN_FILE_BBB;
+	// Hack to get rid of compiler error due to unused variable.
+	cnt = i2c_bus;
+
+	fname = PWR_EN_FILE_RPI;
 
 	if (0 > (fd = open(fname, O_RDWR))) {
 		fprintf(stderr,
@@ -260,10 +260,7 @@ bool configure_tps65217(int i2c_bus)
 	if (!power_down_spi_connector(i2c_bus))
 		return false;
 
-	if (0 > i2c_bus)
-		fname = PWR_EN_FILE_RPI;
-	else
-		fname = PWR_EN_FILE_BBB;
+	fname = PWR_EN_FILE_RPI;
 
 	if (0 > (fd = open(fname, O_RDWR))) {
 		fprintf(stderr,
