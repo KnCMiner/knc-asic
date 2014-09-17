@@ -25,11 +25,26 @@
 
 #define UNUSED __attribute__((unused))
 
+#ifdef CONTROLLER_BOARD_BBB
+#define SPI_DEFAULT_DEVICE	"spidev1.0"
+#endif
+#ifdef CONTROLLER_BOARD_RPI
 #define SPI_DEFAULT_DEVICE	"spidev0.0"
+#endif
+#ifdef CONTROLLER_BOARD_BACKPLANE
+#define SPI_DEFAULT_DEVICE	"UNKNOWN"
+#define SPI_MODE		(SPI_CS_HIGH)
+#define SPI_MAX_SPEED		600000
+#endif
+
 #define SPI_DEVICE_TEMPLATE	"/dev/%s"
+#ifndef SPI_MODE
 #define SPI_MODE		(SPI_CPHA | SPI_CPOL | SPI_CS_HIGH)
+#endif
 #define SPI_BITS_PER_WORD	8
+#ifndef SPI_MAX_SPEED
 #define SPI_MAX_SPEED		3000000
+#endif
 #define SPI_DELAY_USECS		0
 
 struct spidev_context {
