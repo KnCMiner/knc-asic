@@ -1,4 +1,5 @@
-CFLAGS=-g -O0 -W -Wall -Werror -I. $(DEFINES)
+OPTFLAGS=-O2
+CFLAGS=-g $(OPTFLAGS) -W -Wall -Werror -I. $(DEFINES)
 
 LDLIBS=
 
