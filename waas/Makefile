@@ -1,4 +1,5 @@
-CFLAGS=-W -Wall -O2 -Werror $(DEFINES)
+OPTFLAGS=-O2
+CFLAGS=-W -Wall $(OPTFLAGS) -Werror $(DEFINES)
 
 CFLAGS +=  -I..
 
