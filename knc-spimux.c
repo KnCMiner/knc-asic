@@ -21,14 +21,16 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <zlib.h>
-
 #include "miner.h"
 #include "logging.h"
 
 #include "knc-transport.h"
 
 #include "knc-asic.h"
+
+#ifndef MAX
+#define MAX(a,b) ((a) < (b) ? (b) : (a))
+#endif
 
 /* Control Commands
  *
@@ -78,7 +80,7 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 	}
 	txbuf[0] = 8 << 4 | (channel + 1);
 	txbuf[1] = msglen;
-	knc_prepare_neptune_message(request_length, request, txbuf+2);
+	knc_prepare_neptune_titan_message(request_length, request, txbuf+2);
 
 	return offset + len;
 }

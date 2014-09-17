@@ -1,7 +1,10 @@
 #ifndef _CGMINER_NEPTUNE_H
 #define _CGMINER_NEPTUNE_H 
 #include <stdint.h>
-#include "miner.h"
+#include <miner.h>
+
+#define	BLOCK_HEADER_BYTES			80
+#define	BLOCK_HEADER_BYTES_WITHOUT_NONCE	(BLOCK_HEADER_BYTES - 4)
 
 /* ASIC Command codes */
 #define	KNC_ASIC_CMD_GETINFO             0x80
@@ -9,6 +12,7 @@
 #define KNC_ASIC_CMD_SETWORK_CLEAN       0x83        /* Neptune */
 #define KNC_ASIC_CMD_HALT                0x83        /* Jupiter */
 #define KNC_ASIC_CMD_REPORT              0x82
+#define KNC_ASIC_CMD_SETUP_CORE          0x87
 
 /* Status byte */
 #define KNC_ASIC_ACK_CRC                    (1<<5)
@@ -19,19 +23,28 @@
 /* Version word */
 #define KNC_ASIC_VERSION_JUPITER            0xa001
 #define KNC_ASIC_VERSION_NEPTUNE            0xa002
+#define KNC_ASIC_VERSION_TITAN              0xa102
 
 /* Limits of current chips & I/O board */
 #define KNC_MAX_ASICS			6
 #define KNC_MAX_DIES_PER_ASIC		4
-#define KNC_MAX_CORES_PER_DIE		360
+#define KNC_CORES_PER_DIE_JUPITER	48
+#define KNC_CORES_PER_DIE_NEPTUNE	360
+#define KNC_CORES_PER_DIE_TITAN		571
+#define KNC_MAX_CORES_PER_DIE		(KNC_CORES_PER_DIE_TITAN)
+#define	KNC_TITAN_THREADS_PER_CORE	8
+
+enum asic_version {
+	KNC_VERSION_UNKNOWN = 0,
+	KNC_VERSION_JUPITER,
+	KNC_VERSION_NEPTUNE,
+	KNC_VERSION_TITAN,
+} version;
 
 struct knc_die_info {
-	enum {
-		KNC_VERSION_UNKNOWN = 0,
-		KNC_VERSION_JUPITER,
-		KNC_VERSION_NEPTUNE
-	} version;
+	enum asic_version version;
 	char want_work[KNC_MAX_CORES_PER_DIE];
+	char has_report[KNC_MAX_CORES_PER_DIE];
 	int cores;
 	int pll_locked;
 	int hash_reset_n;
@@ -53,19 +66,37 @@ struct knc_report {
 	} nonce[KNC_NONCES_PER_REPORT];
 };
 
+struct titan_setup_core_params {
+	uint16_t bad_address_mask[2];
+	uint16_t bad_address_match[2];
+	uint8_t difficulty;
+	uint8_t thread_enable;
+	uint16_t thread_base_address[KNC_TITAN_THREADS_PER_CORE];
+	uint16_t lookup_gap_mask[KNC_TITAN_THREADS_PER_CORE];
+	uint16_t N_mask[KNC_TITAN_THREADS_PER_CORE];
+	uint8_t N_shift[KNC_TITAN_THREADS_PER_CORE];
+	uint32_t nonce_top;
+	uint32_t nonce_bottom;
+};
+
 int knc_prepare_info(uint8_t *request, int die, struct knc_die_info *die_info, int *response_size);
 int knc_prepare_report(uint8_t *request, int die, int core);
+int knc_prepare_titan_setwork(uint8_t *request, int die, int core, int slot, struct work *work, int clean);
 int knc_prepare_neptune_setwork(uint8_t *request, int die, int core, int slot, struct work *work, int clean);
 int knc_prepare_jupiter_setwork(uint8_t *request, int die, int core, int slot, struct work *work);
 int knc_prepare_jupiter_halt(uint8_t *request, int die, int core);
 int knc_prepare_neptune_halt(uint8_t *request, int die, int core);
+int knc_prepare_titan_halt(uint8_t *request, int die, int core);
 
 int knc_check_response(uint8_t *response, int response_length, uint8_t ack);
 
 int knc_decode_info(uint8_t *response, struct knc_die_info *die_info);
 int knc_decode_report(uint8_t *response, struct knc_report *report, int version);
 
-void knc_prepare_neptune_message(int request_length, const uint8_t *request, uint8_t *buffer);
+void knc_prepare_neptune_titan_message(int request_length, const uint8_t *request, uint8_t *buffer);
+
+bool fill_in_thread_params(int num_threads, struct titan_setup_core_params *params);
+bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params);
 
 #define KNC_ACCEPTED    (1<<0)
 #define KNC_ERR_CRC     (1<<1)
@@ -81,6 +112,7 @@ int knc_syncronous_transfer(void *ctx, int channel, int request_length, const ui
 
 /* Detect ASIC DIE version */
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);
+char * get_asicname_from_version(enum asic_version version);
 
 /* Controller channel status */
 struct knc_spimux_status

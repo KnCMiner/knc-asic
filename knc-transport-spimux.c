@@ -25,7 +25,8 @@
 
 #define UNUSED __attribute__((unused))
 
-#define SPI_DEVICE_TEMPLATE	"/dev/spidev%d.%d"
+#define SPI_DEFAULT_DEVICE	"spidev0.0"
+#define SPI_DEVICE_TEMPLATE	"/dev/%s"
 #define SPI_MODE		(SPI_CPHA | SPI_CPOL | SPI_CS_HIGH)
 #define SPI_BITS_PER_WORD	8
 #define SPI_MAX_SPEED		3000000
@@ -40,10 +41,12 @@ struct spidev_context {
 };
 
 /* Init SPI transport */
-void *knc_trnsp_new(int dev_idx)
+void *knc_trnsp_new(const char *devname)
 {
 	struct spidev_context *ctx;
 	char dev_name[PATH_MAX];
+	if (!devname)
+		devname = SPI_DEFAULT_DEVICE;
 
 	if (NULL == (ctx = malloc(sizeof(struct spidev_context)))) {
 		applog(LOG_ERR, "KnC transport: Out of memory");
@@ -55,10 +58,10 @@ void *knc_trnsp_new(int dev_idx)
 	ctx->delay = SPI_DELAY_USECS;
 
 	ctx->fd = -1;
-	sprintf(dev_name, SPI_DEVICE_TEMPLATE,
-		dev_idx + 1, /* bus */
-		0    /* chipselect */
-	       );
+	if (*devname == '/')
+		strcpy(dev_name, devname);
+	else
+		sprintf(dev_name, SPI_DEVICE_TEMPLATE, devname);
 	if (0 > (ctx->fd = open(dev_name, O_RDWR))) {
 		applog(LOG_ERR, "KnC transport: Can not open SPI device %s: %m",
 		       dev_name);

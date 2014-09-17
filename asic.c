@@ -16,6 +16,8 @@ struct knc_die_info die_info;
 
 #define chip_version (die_info.version)
 
+static void do_halt_(void *ctx, int channel, int die, int core);
+
 static void detect_chip(void *ctx, int channel, int die)
 {
 	if (chip_version != KNC_VERSION_UNKNOWN)
@@ -35,7 +37,7 @@ static void do_info(void *ctx, int channel, int die, UNUSED int argc, UNUSED cha
 		exit(1);
 	}
 
-	printf("Version: %d\n", die_info.version);
+	printf("Version: %s\n", get_asicname_from_version(die_info.version));
 	printf("Cores: %d\n", die_info.cores);
 	if (die_info.pll_power_down >= 0) printf("PLL power: %s\n", die_info.pll_power_down ? "DOWN" : "UP");
 	if (die_info.pll_locked >= 0)     printf("PLL status: %s\n", die_info.pll_locked ? "GOOD" : "BAD");
@@ -44,8 +46,8 @@ static void do_info(void *ctx, int channel, int die, UNUSED int argc, UNUSED cha
 	printf("Want work: ");
 	int core;
 	for (core = 0; core < die_info.cores; core++) {
-		putchar(die_info.want_work[core] == 0 ? '.' :
-		        die_info.want_work[core] == 1 ? '*' :
+		putchar(die_info.want_work[core] == 0 ? (die_info.has_report[core] == 1 ? 'o' : '.') :
+		        die_info.want_work[core] == 1 ? (die_info.has_report[core] == 1 ? '0' : '*') :
 		        '?');
 	}
 	putchar('\n');
@@ -89,6 +91,7 @@ static void handle_report(uint8_t *response)
 		printf("Current : 0x%x\n", report.active_slot);
 		break;
 	case KNC_VERSION_NEPTUNE:
+	case KNC_VERSION_TITAN:
 		nonces = 5;
 		printf("Next    : 0x%x %s\n", report.next_slot, report.next_state ? "LOADED" : "FREE");
 		printf("Current : 0x%x %s\n", report.active_slot, report.state ? "HASHING" : "IDLE");
@@ -106,8 +109,8 @@ static void handle_report(uint8_t *response)
 static void do_setwork(void *ctx, int channel, int die, UNUSED int argc, char **args)
 {
 	uint8_t midstate[8*4];
-	uint8_t data[16*4+3*4];
-	int request_length = 4 + 1 + 6*4 + 3*4 + 8*4;
+	uint8_t data[BLOCK_HEADER_BYTES_WITHOUT_NONCE];
+	int request_length = 4 + 1 + BLOCK_HEADER_BYTES_WITHOUT_NONCE;
 	uint8_t request[request_length];
 	int response_length = 1 + 1 + (1 + 4) * 5;
 	uint8_t response[response_length];
@@ -120,13 +123,14 @@ static void do_setwork(void *ctx, int channel, int die, UNUSED int argc, char **
 	int slot = strtoul(*args++, NULL, 0);
 	int clean = strtoul(*args++, NULL, 0);
 	memset(data, 0, sizeof(data));
-	hex_decode(midstate, *args++, sizeof(midstate));
-	hex_decode(data+16*4, *args++, sizeof(data)-16*4);
 
 	detect_chip(ctx, channel, die);
 
 	switch(chip_version) {
 	case KNC_VERSION_JUPITER:
+		hex_decode(midstate, *args++, sizeof(midstate));
+		hex_decode(data+16*4, *args++, sizeof(data)-16*4);
+
 		if (clean) {
 			/* Double halt to get rid of any previous queued work */
 			request_length = knc_prepare_jupiter_halt(request, die, core);
@@ -139,7 +143,20 @@ static void do_setwork(void *ctx, int channel, int die, UNUSED int argc, char **
 			applog(LOG_ERR, "KnC %d-%d: Core disabled", channel, die);
 		break;
 	case KNC_VERSION_NEPTUNE:
-		request_length = knc_prepare_neptune_setwork(request, die, core, slot, &work, clean);
+	case KNC_VERSION_TITAN:
+		if (KNC_VERSION_NEPTUNE == chip_version) {
+			hex_decode(midstate, *args++, sizeof(midstate));
+			hex_decode(data+16*4, *args++, sizeof(data)-16*4);
+
+			request_length = knc_prepare_neptune_setwork(request, die, core, slot, &work, clean);
+		} else {
+			/* KNC_VERSION_TITAN */
+			++args; /* ignore midstate */
+			hex_decode(data, *args++, sizeof(data));
+
+			request_length = knc_prepare_titan_setwork(request, die, core, slot, &work, clean);
+		}
+
 		int status = knc_syncronous_transfer(ctx, channel, request_length, request, response_length, response);
 		if (status != KNC_ACCEPTED) {
 			if (response[0] == 0x7f) {
@@ -181,6 +198,7 @@ static void do_report(void *ctx, int channel, int die, UNUSED int argc, char **a
 		knc_syncronous_transfer(ctx, channel, request_length, request, response_length, response);
 		break;
 	case KNC_VERSION_NEPTUNE:
+	case KNC_VERSION_TITAN:
 		status = knc_syncronous_transfer(ctx, channel, request_length, request, response_length, response);
 		if (status) {
 			applog(LOG_ERR, "KnC %d-%d: Failed (%x)", channel, die, status);
@@ -192,11 +210,52 @@ static void do_report(void *ctx, int channel, int die, UNUSED int argc, char **a
 	handle_report(response);
 }
 
-static void do_halt(void *ctx, int channel, int die, UNUSED int argc, char **args)
+static void do_titan_setup(void *ctx, int channel, int die, UNUSED int argc, char **args)
 {
+#define	DEFAULT_DIFF_FILTERING_ZEROES	12
+	struct titan_setup_core_params setup_params = {
+		.bad_address_mask = {0, 0},
+		.bad_address_match = {0x3FF, 0x3FF},
+		.difficulty = DEFAULT_DIFF_FILTERING_ZEROES,
+		.thread_enable = 0xFF,
+		.thread_base_address = {0, 1, 2, 3, 4, 5, 6, 7},
+		.lookup_gap_mask = {0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7, 0x7},
+		.N_mask = {0, 0, 0, 0, 0, 0, 0, 0},
+		.N_shift = {0, 0, 0, 0, 0, 0, 0, 0},
+		.nonce_bottom = 0,
+		.nonce_top = 0xFFFFFFFF,
+	};
+
 	int core = strtoul(*args++, NULL, 0);
-	int request_length = 4 + 1 + 6*4 + 3*4 + 8*4;
+	int num_threads = strtoul(*args++, NULL, 0);
+	setup_params.nonce_bottom = strtoul(*args++, NULL, 0);
+	setup_params.nonce_top = strtoul(*args++, NULL, 0);
+
+	if (!fill_in_thread_params(num_threads, &setup_params))
+		return;
+
+	detect_chip(ctx, channel, die);
+
+	switch(chip_version) {
+	case KNC_VERSION_JUPITER:
+	case KNC_VERSION_NEPTUNE:
+		applog(LOG_ERR, "This command is for Titan only!");
+		return;
+	case KNC_VERSION_TITAN:
+		do_halt_(ctx, channel, die, core);
+		knc_titan_setup_core(ctx, channel, die, core, &setup_params);
+		break;
+	case KNC_VERSION_UNKNOWN:
+		break; /* To keep GCC happy */
+	}
+}
+
+static void do_halt_(void *ctx, int channel, int die, int core)
+{
+	int request_length = 4 + 1 + BLOCK_HEADER_BYTES_WITHOUT_NONCE;
 	uint8_t request[request_length];
+	int response_length = 1 + 1 + (1 + 4) * 5;
+	uint8_t response[response_length];
 	int status;
 
 	detect_chip(ctx, channel, die);
@@ -211,15 +270,33 @@ static void do_halt(void *ctx, int channel, int die, UNUSED int argc, char **arg
 		knc_syncronous_transfer(ctx, channel, request_length, request, 0, NULL);
 		break;
 	case KNC_VERSION_NEPTUNE:
-		request_length = knc_prepare_neptune_halt(request, die, core);
-		status = knc_syncronous_transfer(ctx, channel, request_length, request, 0, NULL);
-		if (status) {
-			applog(LOG_ERR, "KnC %d-%d: Failed (%x)", channel, die, status);
-			return;
+	case KNC_VERSION_TITAN:
+		if (KNC_VERSION_NEPTUNE == chip_version) {
+			request_length = knc_prepare_neptune_halt(request, die, core);
+		} else {
+			/* KNC_VERSION_TITAN */
+			request_length = knc_prepare_titan_halt(request, die, core);
 		}
+		status = knc_syncronous_transfer(ctx, channel, request_length, request, response_length, response);
+		if (status != KNC_ACCEPTED) {
+			if (response[0] == 0x7f) {
+				applog(LOG_ERR, "KnC %d-%d: Core disabled", channel, die);
+				return;
+			}
+			if (status & KNC_ERR_MASK) {
+				applog(LOG_ERR, "KnC %d-%d: Failed to set work state (%x)", channel, die, status);
+				return;
+			}
+		}
+		break;
 	case KNC_VERSION_UNKNOWN:
 		break; /* To keep GCC happy */
 	}
+}
+
+static inline void do_halt(void *ctx, int channel, int die, UNUSED int argc, char **args)
+{
+	do_halt_(ctx, channel, die, strtoul(*args, NULL, 0));
 }
 
 static void do_raw(void *ctx, int channel, int die, UNUSED int argc, char **args)
@@ -324,10 +401,11 @@ struct knc_asic_command {
 	void (*handler)(void *ctx, int channel, int die, int nargs, char **args);
 } knc_asic_commands[] = {
 	{"info", "", "ASIC version & info", 0, do_info},
-	{"setwork", "core slot(1-15) clean(0/1) midstate data", "Set work vector", 5, do_setwork},
+	{"setwork", "core slot(1-15) clean(0/1) midstate data", "Set work vector (for Titan midstate is ignored)", 5, do_setwork},
 	{"report", "core", "Get nonce report", 1, do_report},
 	{"halt", "core", "Halt core", 1, do_halt},
 	{"freq", "frequency", "Set core frequency", 1, do_freq},
+	{"titan", "core num_threads nonce_bottom nonce_top", "Setup Titan core", 4, do_titan_setup},
 	{"raw", "response_length request_data", "Send raw ASIC request", 2, do_raw},
 	{NULL, NULL, NULL, 0, NULL}
 };
@@ -364,19 +442,36 @@ int main(int argc, char **argv)
 	int channel, die;
 	char *command;
 	char **args = &argv[1];
+	const char *devname = NULL;
 	
 	for (;argc > 1 && *args[0] == '-'; argc--, args++) {
 		if (strcmp(*args, "-n") == 0) {
 			die_info.version = KNC_VERSION_NEPTUNE;
-			die_info.cores = 360;
+			die_info.cores = KNC_CORES_PER_DIE_NEPTUNE;
+			continue;
 		}
-		if (strcmp(*args, "-c") == 0 && argc > 1)  {
+		if (strcmp(*args, "-t") == 0) {
+			die_info.version = KNC_VERSION_TITAN;
+			die_info.cores = KNC_CORES_PER_DIE_TITAN;
+			continue;
+		}
+		if (strcmp(*args, "-c") == 0 && argc > 2)  {
 			die_info.cores = atoi(args[1]);
 			argc--;
 			args++;
+			continue;
 		}
-		if (strcmp(*args, "-j") == 0)
-			chip_version = KNC_VERSION_JUPITER;
+		if (strcmp(*args, "-j") == 0) {
+			die_info.version = KNC_VERSION_JUPITER;
+			die_info.cores = KNC_CORES_PER_DIE_JUPITER;
+			continue;
+		}
+		if (strcmp(*args, "-i") == 0 && argc > 2)  {
+			devname = args[1];
+			argc--;
+			args++;
+			continue;
+		}
 		if (strcmp(*args, "-d") == 0)
 			debug_level = LOG_DEBUG;
 	}
@@ -386,7 +481,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	void *ctx = knc_trnsp_new(0);
+	void *ctx = knc_trnsp_new(devname);
 	if (!ctx)
 		exit(1);
 

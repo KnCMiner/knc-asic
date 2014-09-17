@@ -1,4 +1,4 @@
-CFLAGS=-g -O0 -W -Wall -Werror
+CFLAGS=-g -O0 -W -Wall -Werror -I.
 
 LDLIBS=-lz
 
