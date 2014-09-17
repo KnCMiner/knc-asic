@@ -20,7 +20,6 @@
 #define	BLOCK_SIZE	(4*1024)
 
 int mem_fd;
-void *gpio_map;
 
 /* I/O access */
 volatile unsigned *gpio;
@@ -90,7 +89,7 @@ static void setup_io(void)
 	      exit(-1);
 	}
 
-	gpio_map = mmap(
+	gpio = mmap(
 		NULL,			/* Any adddress in our space will do */
 		BLOCK_SIZE,		/* Map length */
 		PROT_READ | PROT_WRITE,	/* Enable reading & writting to mapped memory */
@@ -101,11 +100,8 @@ static void setup_io(void)
 
 	close(mem_fd); /* No need to keep mem_fd open after mmap */
 
-	if (gpio_map == MAP_FAILED) {
-		printf("mmap error %d\n", (int)gpio_map);
+	if (gpio == MAP_FAILED) {
+		printf("mmap error %m\n");
 		exit(-1);
 	}
-
-	/* Always use volatile pointer! */
-	gpio = (volatile unsigned *)gpio_map;
 }
