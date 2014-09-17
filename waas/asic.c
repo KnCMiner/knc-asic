@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "knc-asic.h"
 #include "asic.h"
 #include "eeprom.h"
 
@@ -40,6 +41,7 @@ brd_type_t asic_boardtype_from_serial(char *serial)
 	case 'G':
 		return ASIC_BOARD_8GE;
 		break;
+	case 'I':
 	case 'E':
 		return ASIC_BOARD_ERICSSON;
 		break;
@@ -54,23 +56,11 @@ static bool device_is_Neptune_from_serial(char *serial)
 	return ('N' == serial[0]);
 }
 
-static brd_type_t asic_boardtype_from_eeprom(uint8_t eeprom_revision)
-{
-	switch (eeprom_revision) {
-	case ASIC_BOARD_4GE:
-	case ASIC_BOARD_8GE:
-	case ASIC_BOARD_ERICSSON:
-		return eeprom_revision;
-	default:
-		return ASIC_BOARD_REVISION_UNDEFINED;
-	}
-}
-
 unsigned int asic_init_boards(asic_board_t** boards)
 {
 	int idx;
 	unsigned int good_boards = 0;
-	for (idx = 0; idx < MAX_ASICS; ++idx) {
+	for (idx = 0; idx < KNC_MAX_ASICS; ++idx) {
 		asic_board_t * board = (asic_board_t*)calloc(1, sizeof(asic_board_t));
 		board->id = idx;
 		if (asic_init_board(board, ASIC_BOARD_REVISION_UNDEFINED, false) && board->enabled) {
@@ -84,7 +74,7 @@ unsigned int asic_init_boards(asic_board_t** boards)
 void asic_release_boards(asic_board_t** boards)
 {
 	int idx;
-	for (idx = 0; idx < MAX_ASICS; ++idx) {
+	for (idx = 0; idx < KNC_MAX_ASICS; ++idx) {
 		asic_board_t * board = boards[idx];
 		asic_release_board(board);
 		free(board);
@@ -114,9 +104,7 @@ bool asic_board_read_info(asic_board_t *board)
 	strncpy((char *)board->serial_num, (char *)data.SN, sizeof(board->serial_num));
 	board->serial_num[sizeof(board->serial_num) - 1] = '\0';
 
-	board->type = asic_boardtype_from_eeprom(data.board_revision);
-	if (ASIC_BOARD_REVISION_UNDEFINED == board->type)
-		board->type = asic_boardtype_from_serial((char *)board->serial_num);
+	board->type = asic_boardtype_from_serial((char *)board->serial_num);
 	board->neptune = device_is_Neptune_from_serial((char *)board->serial_num);
 	return true;	
 }
@@ -149,7 +137,7 @@ void asic_release_board(asic_board_t* board)
 
 bool dcdc_is_ok(asic_board_t *board, int dcdc)
 {
-	if ((0 > dcdc) || (MAX_DCDC_DEVICES <= dcdc))
+	if ((0 > dcdc) || (KNC_MAX_DCDC_DEVICES <= dcdc))
 		return false;
 
 	switch (board->type) {

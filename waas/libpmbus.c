@@ -1,5 +1,4 @@
 #include "pmbus.h"
-#include "neptune.h"
 #include "i2c.h"
 
 #include <string.h>
@@ -64,6 +63,13 @@
 /* Ericsson specific */
 #define	ERICSSON_PMBUS_REVISION_VALUE	0x1
 #define ERICSSON_MFR_ID "Ericsson Power Modules"
+
+/* Debug info */
+#ifdef	DEBUG_INFO
+#define	PRINT_DEBUG(...)	fprintf(stderr, "[DEBUG] --- " __VA_ARGS__)
+#else
+#define	PRINT_DEBUG(...)
+#endif
 
 dcdc_mfrid_t pmbus_get_dcdc_mfr_id(int i2c_bus, useconds_t delay_us)
 {

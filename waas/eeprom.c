@@ -6,9 +6,8 @@
 #include <limits.h>
 #include <arpa/inet.h>
 
-#include "neptune.h"
-#include "eeprom.h"
 #include "asic.h"
+#include "eeprom.h"
 
 /* If port_num < 0 then:
  *   if port_num = -1 => use control-board eeprom
@@ -19,7 +18,7 @@ static int open_dev(int port_num, char *dev_fname, int oflag)
 	int fd;
 
 	if (port_num >= 0) {
-		if (port_num >= MAX_ASICS) {
+		if (port_num >= KNC_MAX_ASICS) {
 exit_wrong_port:
 			fprintf(stderr, "Wrong port %d\n", port_num);
 			return -1;

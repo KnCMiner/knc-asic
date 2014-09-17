@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "asic.h"
+#include "knc-asic.h"
 
 #define	CONTROL_BOARD_EEPROM_FILE	"/sys/bus/i2c/devices/1-0054/eeprom"
 #define	BBB_EEPROM_FILE			"/sys/bus/i2c/devices/0-0050/eeprom"
@@ -12,7 +12,7 @@
 #define	EEPROM_FILE	"/sys/bus/i2c/devices/%d-0050/eeprom"
 #define	EEPROM_SIZE	1024
 
-#define	ENTRIES_IN_ENA_MAP	(CORES_IN_ASIC / 8)
+#define	ENTRIES_IN_ENA_MAP	(KNC_MAX_CORES_PER_DIE / 8)
 
 struct __attribute__ ((__packed__)) eeprom_neptune {
     /* 0: */

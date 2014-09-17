@@ -5,19 +5,16 @@
 #include <stdbool.h>
 
 #include "i2c.h"
-#include "neptune.h"
 
-#define	FIRST_ASIC_I2C_BUS	3
+#define	ARRAY_SIZE(a)		((int)(sizeof(a) / sizeof(a[0])))
 
-/* ASIC consists of 4 dies, 48/360 cores in each die */
-#define	DIES_IN_ASIC		4
-#define	CORES_IN_DIE		360
-#define	CORES_IN_ASIC		(DIES_IN_ASIC * CORES_IN_DIE)
-#define	MAX_DCDC_DEVICES	(2 * DIES_IN_ASIC)
-#define	NEPTUNE_RESULT_FIFO_DEPTH 5
+#define	FIRST_ASIC_I2C_BUS	2
 
-#define	ASIC_PLL_MHZ_FROM_REG(reg)	(((reg) + 1) * 25)
-#define	ASIC_PLL_REG_FROM_MHZ(mhz)	(((mhz) / 25) - 1)
+/* Hardware specs for the Neptune device */
+#define	KNC_MAX_DCDC_DEVICES	(2 * KNC_MAX_DIES_PER_ASIC)
+
+#define	ERICSSON_I2C_WORKAROUND_DELAY_us	100
+#define	ERICSSON_SAFE_BIG_DELAY			100000
 
 /* These enum values must be sorted in ascending order.
  * When iniitc detects "device type" it peeks the highest value of all boards.

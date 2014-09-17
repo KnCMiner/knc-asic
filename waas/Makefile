@@ -2,7 +2,7 @@ CFLAGS=-W -Wall -O2 -Werror
 
 CFLAGS +=  -I..
 
-LDLIBS += -lrt -lz
+LDLIBS += -lrt
 
 all: waas
 
