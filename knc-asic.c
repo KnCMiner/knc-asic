@@ -669,7 +669,7 @@ bool fill_in_thread_params(int num_threads, struct titan_setup_core_params *para
 	return true;
 }
 
-bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params)
+bool knc_titan_setup_core_(void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params)
 {
 #define	SETWORK_CMD_SIZE	(5 + BLOCK_HEADER_BYTES_WITHOUT_NONCE)
 	/* The size of command is the same as for set_work */
@@ -907,4 +907,20 @@ bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, stru
 	}
 
 	return true;
+}
+
+/* Use nonce range to detect if core accepted configuration */
+bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params)
+{
+	struct titan_setup_core_params tmp = *params;
+	if (params->nonce_bottom < 0x01000000) {
+		tmp.nonce_bottom = 0xFF000000;
+		tmp.nonce_top = 0xFFFFFFFF;
+	} else {
+		tmp.nonce_bottom = 0x00000000;
+		tmp.nonce_top = 0x00FFFFFFFF;
+	}
+	if (!knc_titan_setup_core_(ctx, channel, die, core, &tmp))
+		return false;
+	return knc_titan_setup_core_(ctx, channel, die, core, params);
 }
