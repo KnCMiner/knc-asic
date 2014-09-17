@@ -2,7 +2,7 @@ CFLAGS=-g -O0 -W -Wall -Werror -I.
 
 LDLIBS=-lz
 
-BINARIES = asic knc-serial io-pwr knc-led
+BINARIES = asic knc-serial io-pwr knc-led RPi_gpio_pud
 
 .PHONY: waas
 
