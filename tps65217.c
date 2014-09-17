@@ -8,12 +8,17 @@
 #include "i2c.h"
 #include "tps65217.h"
 
+#ifdef CONTROLLER_BOARD_BBB
 /* BeagleBone Black */
-#define	PWR_EN_FILE_BBB		"/sys/class/gpio/gpio49/direction"
-#define	DCDC_RESET_FILE_BBB	"/sys/class/gpio/gpio76/direction"
+#define	PWR_EN_FILE		"/sys/class/gpio/gpio49/direction"
+#define	DCDC_RESET_FILE		"/sys/class/gpio/gpio76/direction"
+#endif
+
+#ifdef CONTROLLER_BOARD_RPI
 /* Raspberry Pi */
-#define	PWR_EN_FILE_RPI		"/sys/class/gpio/gpio24/direction"
-#define	DCDC_RESET_FILE_RPI	"/sys/class/gpio/gpio23/direction"
+#define	PWR_EN_FILE		"/sys/class/gpio/gpio24/direction"
+#define	DCDC_RESET_FILE		"/sys/class/gpio/gpio23/direction"
+#endif
 
 static bool reset_dcdc(int i2c_bus, bool on);
 
@@ -84,16 +89,13 @@ static void tps65217_write_level2_reg(int i2c_bus, uint8_t reg, uint8_t value)
 static bool reset_dcdc(int i2c_bus, bool on)
 {
 	int fd, exp_cnt, cnt;
-	char *fname;
 
 	// Hack to get rid of compiler error due to unused variable.
 	cnt = i2c_bus;
 
-	fname = DCDC_RESET_FILE_RPI;
-
-	if (0 > (fd = open(fname, O_RDWR))) {
+	if (0 > (fd = open(DCDC_RESET_FILE, O_RDWR))) {
 		fprintf(stderr,
-			"Can not open %s: %m\n", fname);
+			"Can not open %s: %m\n", DCDC_RESET_FILE);
 		return false;		
 	}
 	
@@ -113,16 +115,13 @@ static bool reset_dcdc(int i2c_bus, bool on)
 static bool pwren_dcdc(int i2c_bus, bool on)
 {
 	int fd, exp_cnt, cnt;
-	char *fname;
 
 	// Hack to get rid of compiler error due to unused variable.
 	cnt = i2c_bus;
 
-	fname = PWR_EN_FILE_RPI;
-
-	if (0 > (fd = open(fname, O_RDWR))) {
+	if (0 > (fd = open(PWR_EN_FILE, O_RDWR))) {
 		fprintf(stderr,
-			"Can not open %s: %m\n", fname);
+			"Can not open %s: %m\n", PWR_EN_FILE);
 		return false;		
 	}
 	
@@ -147,7 +146,6 @@ bool configure_tps65217(int i2c_bus)
 	int cnt = 0;
 	int data;
 	int fd;
-	char *fname;
 
 	power_down_spi_connector(i2c_bus);
 	usleep(100000);
@@ -260,11 +258,9 @@ bool configure_tps65217(int i2c_bus)
 	if (!power_down_spi_connector(i2c_bus))
 		return false;
 
-	fname = PWR_EN_FILE_RPI;
-
-	if (0 > (fd = open(fname, O_RDWR))) {
+	if (0 > (fd = open(PWR_EN_FILE, O_RDWR))) {
 		fprintf(stderr,
-			"Can not open %s: %m\n", fname);
+			"Can not open %s: %m\n", PWR_EN_FILE);
 		return false;		
 	}
 
@@ -294,7 +290,7 @@ bool configure_tps65217(int i2c_bus)
 	close(fd);
 	if (4 != cnt) {
 		fprintf(stderr,
-			"Write failed to %s\n", fname);
+			"Write failed to %s\n", PWR_EN_FILE);
 		return false;	
 	}
 
