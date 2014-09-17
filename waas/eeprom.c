@@ -61,19 +61,23 @@ static bool read_buf(int fd, uint8_t *buf, unsigned int len)
 	return true;
 }
 
-bool read_eeprom(int port_num, struct eeprom_neptune *data)
+bool read_serial_num_from_eeprom(int port_num, uint8_t *serial_num, int serial_num_size)
 {
 	int fd;
 	char dev_fname[PATH_MAX];
+	uint8_t data[1024];
 
 	if (0 > (fd = open_dev(port_num, dev_fname, O_RDONLY)))
 		return false;
-	if (!read_buf(fd, (uint8_t *)data, sizeof(*data))) {
+	if (!read_buf(fd, data, sizeof(data))) {
 		close(fd);
 		fprintf(stderr, "Error reading %s\n", dev_fname);
 		return false;
 	}
 	close(fd);
+
+	if (data[32] && data[32] != 255)
+		memcpy(serial_num, data+32, serial_num_size);
 
 	return true;
 }

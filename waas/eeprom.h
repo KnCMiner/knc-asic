@@ -33,7 +33,6 @@ struct __attribute__ ((__packed__)) eeprom_neptune {
 	uint8_t reserved_2[32];
 };
 
-bool read_eeprom(int port_num, struct eeprom_neptune *data);
 bool read_serial_num_from_eeprom(int port_num,
 				 uint8_t *serial_num, int serial_num_size);
 

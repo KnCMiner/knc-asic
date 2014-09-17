@@ -9,51 +9,55 @@
 #include "asic.h"
 #include "eeprom.h"
 
-static const char brdtypestr_4GE[] = "AG";
-static const char brdtypestr_8GE[] = "BG";
-static const char brdtypestr_ERICSSON[] = "BE";
+static const char brdtypestr_JUPITER_REVA[] = "AG";
+static const char brdtypestr_JUPITER_REVB[] = "BG";
+static const char brdtypestr_JUPITER_ERICSSON[] = "BE";
 static const char brdtypestr_NEPTUNE_ERICSSON[] = "NE";
+static const char brdtypestr_TITAN_ERICSSON[] = "TI";
 
-const char *get_str_from_board_type(brd_type_t brd_type, bool neptune)
+const char *get_str_from_board_type(brd_type_t brd_type)
 {
-	if (neptune)
-		return brdtypestr_NEPTUNE_ERICSSON;
-
 	switch (brd_type) {
-	case ASIC_BOARD_8GE:
-		return brdtypestr_8GE;
-	case ASIC_BOARD_ERICSSON:
-		return brdtypestr_ERICSSON;
-	case ASIC_BOARD_4GE:
+	case ASIC_BOARD_TITAN:
+		return brdtypestr_TITAN_ERICSSON;
+	case ASIC_BOARD_NEPTUNE:
+		return brdtypestr_NEPTUNE_ERICSSON;
+	case ASIC_BOARD_JUPITER_REVB:
+		return brdtypestr_JUPITER_REVB;
+	case ASIC_BOARD_JUPITER_ERICSSON:
+		return brdtypestr_JUPITER_ERICSSON;
+	case ASIC_BOARD_JUPITER_REVA:
+		return brdtypestr_JUPITER_REVA;
 	default:
-		return brdtypestr_4GE;
+		return "";
 	}
 }
 
 brd_type_t asic_boardtype_from_serial(char *serial)
 {
-	switch (serial[1]) {
-	case '1':
-	case '2':
-	case 'S':
-		return ASIC_BOARD_4GE;
-		break;
-	case 'G':
-		return ASIC_BOARD_8GE;
-		break;
-	case 'I':
-	case 'E':
-		return ASIC_BOARD_ERICSSON;
-		break;
-	default:
-		return ASIC_BOARD_REVISION_UNDEFINED;
-		break;
+	if (strncmp(serial, "NE", 2) == 0)
+		return ASIC_BOARD_NEPTUNE;
+	if (strncmp(serial, "TI", 2) == 0)
+		return ASIC_BOARD_TITAN;
+	if (serial[0] == 'A') {
+		switch (serial[1]) {
+		case '1':
+		case '2':
+		case 'S':
+			return ASIC_BOARD_JUPITER_REVA;
+			break;
+		case 'G':
+			return ASIC_BOARD_JUPITER_REVB;
+			break;
+		case 'E':
+			return ASIC_BOARD_JUPITER_ERICSSON;
+			break;
+		default:
+			return ASIC_BOARD_UNDEFINED;
+			break;
+		}
 	}
-}
-
-static bool device_is_Neptune_from_serial(char *serial)
-{
-	return ('N' == serial[0]);
+	return ASIC_BOARD_UNDEFINED;
 }
 
 unsigned int asic_init_boards(asic_board_t** boards)
@@ -63,7 +67,7 @@ unsigned int asic_init_boards(asic_board_t** boards)
 	for (idx = 0; idx < KNC_MAX_ASICS; ++idx) {
 		asic_board_t * board = (asic_board_t*)calloc(1, sizeof(asic_board_t));
 		board->id = idx;
-		if (asic_init_board(board, ASIC_BOARD_REVISION_UNDEFINED, false) && board->enabled) {
+		if (asic_init_board(board) && board->enabled) {
 			++good_boards;
 		}
 		boards[idx] = board;
@@ -83,11 +87,9 @@ void asic_release_boards(asic_board_t** boards)
 
 bool asic_board_read_info(asic_board_t *board)
 {
-	struct eeprom_neptune data;
+	board->enabled = read_serial_num_from_eeprom(board->id, board->serial_num, sizeof(board->serial_num)-1);
 
-	board->enabled = read_eeprom(board->id, &data);
-
-	board->type = ASIC_BOARD_REVISION_UNDEFINED;
+	board->type = ASIC_BOARD_UNDEFINED;
 
 	if (!board->enabled) {
 		fprintf(stderr,
@@ -96,32 +98,23 @@ bool asic_board_read_info(asic_board_t *board)
 		return false;
 	}
 
-	if ('X' == data.SN[sizeof(data.SN) - 1]) {
+	if ('X' == board->serial_num[31]) {
 		fprintf(stderr,
 			"ASIC board #%d is marked with TEST_FAIL flag\n",
 			board->id);
 	}
-	strncpy((char *)board->serial_num, (char *)data.SN, sizeof(board->serial_num));
 	board->serial_num[sizeof(board->serial_num) - 1] = '\0';
 
 	board->type = asic_boardtype_from_serial((char *)board->serial_num);
-	board->neptune = device_is_Neptune_from_serial((char *)board->serial_num);
 	return true;	
 }
 
-bool asic_init_board(asic_board_t *board, brd_type_t brd_type, bool neptune)
+bool asic_init_board(asic_board_t *board)
 {
-	if ((brd_type != ASIC_BOARD_4GE) && (brd_type != ASIC_BOARD_8GE) && (brd_type != ASIC_BOARD_ERICSSON)) {
-		asic_board_read_info(board);
-	} else {
-		board->neptune = neptune;
-		board->type = brd_type;
-		memset(board->serial_num, 0, sizeof(board->serial_num));
-		board->enabled = true;
-	}
+	asic_board_read_info(board);
 	if (board->enabled) {
 		printf("ASIC board #%d: sn = %s type = %s\n", board->id,
-		       board->serial_num, get_str_from_board_type(board->type, board->neptune));
+		       board->serial_num, get_str_from_board_type(board->type));
 
 		board->num_dcdc = 0;
 		board->i2c_bus = i2c_connect(FIRST_ASIC_I2C_BUS + board->id);
@@ -141,10 +134,10 @@ bool dcdc_is_ok(asic_board_t *board, int dcdc)
 		return false;
 
 	switch (board->type) {
-	case ASIC_BOARD_8GE:
-	case ASIC_BOARD_ERICSSON:
+	case ASIC_BOARD_JUPITER_REVB:
+	case ASIC_BOARD_JUPITER_ERICSSON:
 		return true;
-	case ASIC_BOARD_4GE:
+	case ASIC_BOARD_JUPITER_REVA:
 	default:
 		if ((0 == dcdc) || (2 == dcdc) || (4 == dcdc) || (7 == dcdc))
 			return true;

@@ -64,6 +64,7 @@
 #define	DEFAULT_4DCDC_VOUT_TRIM	0xff67
 #define	DEFAULT_8DCDC_VOUT_TRIM	0x0033
 
+#define DEFAULT_TITAN_VOUT_TRIM 0xfed4
 #define DEFAULT_NEPTUNE_VOUT_TRIM 0xfed4
 #define DEFAULT_JUPITER_VOUT_TRIM (-420)
 
@@ -76,15 +77,22 @@
 
 #define	IOUT_NORMAL_LEVEL	(5.0)
 
-#define	MIN_DIE_FREQ_REVA		400
-#define	MIN_DIE_FREQ_REVB		400
+#define	MIN_DIE_FREQ_JUPITER_REVA	400
+#define	MAX_DIE_FREQ_JUPITER_REVA	775
+#define	DEFAULT_DIE_FREQ_JUPITER_REVA	750
+
+#define	MIN_DIE_FREQ_JUPITER_REVB	400
+#define	MAX_DIE_FREQ_JUPITER_REVB	1200
+#define	DEFAULT_DIE_FREQ_JUPITER_REVB	900
+
 #define	MIN_DIE_FREQ_NEPTUNE		50
-#define	MAX_DIE_FREQ_REVA		775
-#define	MAX_DIE_FREQ_REVB		1200
 #define	MAX_DIE_FREQ_NEPTUNE		500
-#define	DEFAULT_DIE_FREQ_REVA		750
-#define	DEFAULT_DIE_FREQ_REVB		900
 #define	DEFAULT_DIE_FREQ_NEPTUNE	475
+
+#define	MIN_DIE_FREQ_TITAN		50
+#define	MAX_DIE_FREQ_TITAN	        300
+#define	DEFAULT_DIE_FREQ_TITAN		300
+
 #define	DIE_FREQ_STEP			25
 
 /* Defaults for Auto-PLL parameters */
@@ -99,7 +107,6 @@
 
 struct device_t {
 	brd_type_t dev_type;
-	bool dev_neptune;
 	asic_board_t boards[KNC_MAX_ASICS];
 	int freq_start[KNC_MAX_ASICS];
 	int freq_end[KNC_MAX_ASICS];
@@ -143,48 +150,56 @@ static void detect_device_type(struct device_t *dev, bool write_to_file)
 			fprintf(stderr, "Can not open file %s: %m\n", REVISION_FILE);
 	}
 
-	dev->dev_type = ASIC_BOARD_4GE;
-	dev->dev_neptune = false;
+	dev->dev_type = ASIC_BOARD_UNDEFINED;
 	for (asic = 0; asic < KNC_MAX_ASICS; ++asic) {
 		asic_board_t *board = &(dev->boards[asic]);
 		board->id = asic;
 		if (asic_board_read_info(board)) {
 			if (board->type > dev->dev_type)
 				dev->dev_type = board->type;
-			if (board->neptune)
-				dev->dev_neptune = true;
 			if (NULL != f)
-				fprintf(f, "BOARD%d=%s\n", asic, get_str_from_board_type(board->type, board->neptune));
+				fprintf(f, "BOARD%d=%s\n", asic, get_str_from_board_type(board->type));
 		} else {
-			board->type = ASIC_BOARD_REVISION_UNDEFINED;
+			board->type = ASIC_BOARD_UNDEFINED;
 			if (NULL != f)
 				fprintf(f, "BOARD%d=OFF\n", asic);
 		}
 
-		if (board->neptune) {
+		switch (board->type) {
+		case ASIC_BOARD_TITAN:
 			dev->freq_start[asic] = MIN_DIE_FREQ_NEPTUNE;
 			dev->freq_end[asic] = MAX_DIE_FREQ_NEPTUNE;
 			dev->freq_default[asic] = DEFAULT_DIE_FREQ_NEPTUNE;
-		} else switch (board->type) {
-		case ASIC_BOARD_8GE:
-		case ASIC_BOARD_ERICSSON:
-			dev->freq_start[asic] = MIN_DIE_FREQ_REVB;
-			dev->freq_end[asic] = MAX_DIE_FREQ_REVB;
-			dev->freq_default[asic] = DEFAULT_DIE_FREQ_REVB;
 			break;
-		case ASIC_BOARD_4GE:
+		case ASIC_BOARD_NEPTUNE:
+			dev->freq_start[asic] = MIN_DIE_FREQ_NEPTUNE;
+			dev->freq_end[asic] = MAX_DIE_FREQ_NEPTUNE;
+			dev->freq_default[asic] = DEFAULT_DIE_FREQ_NEPTUNE;
+			break;
+		case ASIC_BOARD_JUPITER_REVB:
+		case ASIC_BOARD_JUPITER_ERICSSON:
+			dev->freq_start[asic] = MIN_DIE_FREQ_JUPITER_REVB;
+			dev->freq_end[asic] = MAX_DIE_FREQ_JUPITER_REVB;
+			dev->freq_default[asic] = DEFAULT_DIE_FREQ_JUPITER_REVB;
+			break;
+		case ASIC_BOARD_JUPITER_REVA:
+			dev->freq_start[asic] = MIN_DIE_FREQ_JUPITER_REVA;
+			dev->freq_end[asic] = MAX_DIE_FREQ_JUPITER_REVA;
+			dev->freq_default[asic] = DEFAULT_DIE_FREQ_JUPITER_REVA;
+			break;
 		default:
-			dev->freq_start[asic] = MIN_DIE_FREQ_REVA;
-			dev->freq_end[asic] = MAX_DIE_FREQ_REVA;
-			dev->freq_default[asic] = DEFAULT_DIE_FREQ_REVA;
+			fprintf(stderr, "ERROR: decect unhandled board type %d\n", board->type);
+			break;
+		case ASIC_BOARD_UNDEFINED:
+			dev->freq_start[asic] = 0;
+			dev->freq_end[asic] = 0;
+			dev->freq_default[asic] = 0;
 			break;
 		}
 	}
 
-	if (dev->dev_neptune)
-		dev->dev_type = ASIC_BOARD_ERICSSON;
 	if (NULL != f) {
-		fprintf(f, "DEVICE=%s\n", get_str_from_board_type(dev->dev_type, dev->dev_neptune));
+		fprintf(f, "DEVICE=%s\n", get_str_from_board_type(dev->dev_type));
 		fclose(f);
 		rename(temp_file_name, REVISION_FILE);
 		free(temp_file_name);
@@ -391,24 +406,29 @@ static int do_print_running_info(FILE *f, struct device_t *dev)
 	return 0;
 }
 
-static int nearest_valid_asic_freq(brd_type_t type, bool neptune, int fr)
+static int nearest_valid_asic_freq(brd_type_t type, int fr)
 {
 	int mod;
 	int start, end;
 
-	if (neptune) {
+	switch (type) {
+	case ASIC_BOARD_TITAN:
+		start = MIN_DIE_FREQ_TITAN;
+		end = MAX_DIE_FREQ_TITAN;
+		break;
+	case ASIC_BOARD_NEPTUNE:
 		start = MIN_DIE_FREQ_NEPTUNE;
 		end = MAX_DIE_FREQ_NEPTUNE;
-	} else switch (type) {
-	case ASIC_BOARD_8GE:
-	case ASIC_BOARD_ERICSSON:
-		start = MIN_DIE_FREQ_REVB;
-		end = MAX_DIE_FREQ_REVB;
 		break;
-	case ASIC_BOARD_4GE:
+	case ASIC_BOARD_JUPITER_REVB:
+	case ASIC_BOARD_JUPITER_ERICSSON:
+		start = MIN_DIE_FREQ_JUPITER_REVB;
+		end = MAX_DIE_FREQ_JUPITER_REVB;
+		break;
+	case ASIC_BOARD_JUPITER_REVA:
 	default:
-		start = MIN_DIE_FREQ_REVA;
-		end = MAX_DIE_FREQ_REVA;
+		start = MIN_DIE_FREQ_JUPITER_REVA;
+		end = MAX_DIE_FREQ_JUPITER_REVA;
 		break;
 	}
 
@@ -456,13 +476,36 @@ static int16_t find_offset_from_voltage(dcdc_mfrid_t mfr_id, float vf)
 	return good_offs;
 }
 
+static int default_dcdc_vout_trim(asic_board_t *board)
+{
+	switch(board->type) {
+	case ASIC_BOARD_JUPITER_REVA:
+	case ASIC_BOARD_JUPITER_REVB:
+		return (board->num_dcdc <= 4) ?
+		       DEFAULT_4DCDC_VOUT_TRIM :
+		       DEFAULT_8DCDC_VOUT_TRIM ;
+		break;
+	case ASIC_BOARD_JUPITER_ERICSSON:
+		return DEFAULT_JUPITER_VOUT_TRIM;
+		break;
+	case ASIC_BOARD_NEPTUNE:
+		return DEFAULT_NEPTUNE_VOUT_TRIM;
+		break;
+	case ASIC_BOARD_TITAN:
+		return DEFAULT_TITAN_VOUT_TRIM;
+		break;
+	default:
+		fprintf(stderr, "INTERNAL ERROR: v_offset unhandled ASIC type %d\n", board->type);
+		return 0;
+	}
+}
+
 static void read_running_settings(struct advanced_config * cfg,
 				  struct device_t *dev, bool use_defaults)
 {
 	int i2c_bus;
 	int data;
 	int asic, die, dcdc;
-	int num_dcdc;
 	dcdc_mfrid_t mfrids[KNC_MAX_DCDC_DEVICES];
 
 	/* Die voltage offsets */
@@ -476,17 +519,17 @@ static void read_running_settings(struct advanced_config * cfg,
 			}
 			continue;
 		}
-		num_dcdc = 0;
+		board->num_dcdc = 0;
 		if (MFRID_UNDEFINED != board_mfrid) {
 			for (dcdc = 0; dcdc < KNC_MAX_DCDC_DEVICES; ++dcdc) {
 				i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
 				mfrids[dcdc] = pmbus_get_dcdc_mfr_id(i2c_bus, ERICSSON_I2C_WORKAROUND_DELAY_us);
 				if (mfrids[dcdc] == board_mfrid)
-					++num_dcdc;
+					board->num_dcdc += 1;
 			}
 		}
 		for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
-			if (0 == num_dcdc) {
+			if (0 == board->num_dcdc) {
 				cfg->dcdc_V_offset[asic][die] = 0x7FFF;
 				continue;
 			}
@@ -500,14 +543,7 @@ static void read_running_settings(struct advanced_config * cfg,
 					data = pmbus_get_vout_trim(i2c_bus, 0);
 				}
 			} else {
-				if (ASIC_BOARD_4GE == board->type)
-					data = (num_dcdc <= 4) ?
-					       DEFAULT_4DCDC_VOUT_TRIM :
-					       DEFAULT_8DCDC_VOUT_TRIM;
-				else if (board->neptune)
-					data = DEFAULT_NEPTUNE_VOUT_TRIM;
-				else
-					data = DEFAULT_JUPITER_VOUT_TRIM;
+				data = default_dcdc_vout_trim(board);
 			}
 			cfg->dcdc_V_offset[asic][die] = find_offset_from_voltage(board_mfrid, dcdc_voltage_from_offset(board_mfrid, data));
 		}
@@ -520,7 +556,7 @@ static void read_running_settings(struct advanced_config * cfg,
 		asic_board_t *board = &(dev->boards[asic]);
 		for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
 			int data = -1;
-			if (ASIC_BOARD_REVISION_UNDEFINED != board->type) {
+			if (ASIC_BOARD_UNDEFINED != board->type) {
 				if (use_defaults) {
 					data = dev->freq_default[asic];
 				} else {
@@ -627,19 +663,14 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 						cfg->dcdc_V_offset[asic_v][die] = find_offset_from_voltage(mfrid_from_board_type(dev->boards[asic_v].type), vf);
 					}
 				}
-				if (vf <= -500.0) {
-					/* use some reasonable default voltage offset for Neptune */
-					if (dev->boards[asic_v].neptune)
-						cfg->dcdc_V_offset[asic_v][die] = DEFAULT_NEPTUNE_VOUT_TRIM;
-					else
-						cfg->dcdc_V_offset[asic_v][die] = DEFAULT_JUPITER_VOUT_TRIM;
-				}
+				if (vf <= -500.0)
+					cfg->dcdc_V_offset[asic_v][die] = default_dcdc_vout_trim(&dev->boards[asic_v]);
 			} else if (asic_f >= 0) {
 				int asic_fr = -1;
 				sscanf(&chunk.memory[tokens[i].start],
 				       "%d", &asic_fr);
 				if (asic_fr >= 0)
-					cfg->die_freq[asic_f][die] = nearest_valid_asic_freq(dev->boards[asic_f].type, dev->boards[asic_f].neptune, asic_fr);
+					cfg->die_freq[asic_f][die] = nearest_valid_asic_freq(dev->boards[asic_f].type, asic_fr);
 			}
 		}
 	}
@@ -658,7 +689,7 @@ static bool asic_set_die_frequencies(asic_board_t *board, int *die_freq, int onl
 	int start_die, end_die;
 	bool success;
 
-	if (ASIC_BOARD_REVISION_UNDEFINED == board->type) {
+	if (ASIC_BOARD_UNDEFINED == board->type) {
 		return false;
 	}
 
@@ -671,7 +702,7 @@ static bool asic_set_die_frequencies(asic_board_t *board, int *die_freq, int onl
 
 	success = true;
 	for (die = start_die; die < end_die; ++die) {
-		if (!set_die_freq(board->id, die, nearest_valid_asic_freq(board->type, board->neptune, die_freq[die])))
+		if (!set_die_freq(board->id, die, nearest_valid_asic_freq(board->type, die_freq[die])))
 			success = false;
 	}
 	return success;
@@ -688,7 +719,7 @@ static bool implement_settings(struct advanced_config * cfg,
 	/* Die voltage offsets */
 	for (asic = 0; asic < KNC_MAX_ASICS; ++asic) {
 		asic_board_t *board = &(dev->boards[asic]);
-		if (ASIC_BOARD_REVISION_UNDEFINED == board->type) {
+		if (ASIC_BOARD_UNDEFINED == board->type) {
 			continue;
 		}
 		if (0 > (i2c_bus = i2c_connect(FIRST_ASIC_I2C_BUS + asic))) {
@@ -835,7 +866,7 @@ static int do_auto_PLL(struct device_t *dev,
 	bool freq_changed = false;
 
 	for (asic = 0; asic < KNC_MAX_ASICS; ++asic)
-		bad_freq[asic] = MAX_DIE_FREQ_REVB * 2;
+		bad_freq[asic] = MAX_DIE_FREQ_JUPITER_REVB * 2;
 
 #ifdef DEBUG_INFO
 	printf("[%lu] AUTOPLL: int=%u, T_low=%f, T_high=%f, F_up=%u, F_down=%u\n", (unsigned long)time(NULL), minimum_PLL_change_interval, temp_ok_low, temp_ok_high, freq_step_up, freq_step_down);
@@ -955,7 +986,7 @@ static int do_auto_PLL(struct device_t *dev,
 		}
 
 		/* Normalize freq_step */
-		freq_step = nearest_valid_asic_freq(board->type, board->neptune, data + freq_step) - data;
+		freq_step = nearest_valid_asic_freq(board->type, data + freq_step) - data;
 		if (0 != freq_step) {
 			data += freq_step;
 			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die)
@@ -1072,19 +1103,27 @@ int main(int argc, char *argv[])
 			}
 			if (0 == strcmp(optarg, "valid-die-frequencies")) {
 				int freq;
-				int start = MIN_DIE_FREQ_REVA;
-				int end = MAX_DIE_FREQ_REVA;
+				int start = 0;
+				int end = 0;
 				int step = DIE_FREQ_STEP;
-				if (dev.dev_neptune) {
+				switch (dev.dev_type) {
+				case ASIC_BOARD_TITAN:
+					start = MIN_DIE_FREQ_TITAN;
+					end = MAX_DIE_FREQ_TITAN;
+					break;
+				case ASIC_BOARD_NEPTUNE:
 					start = MIN_DIE_FREQ_NEPTUNE;
 					end = MAX_DIE_FREQ_NEPTUNE;
-				} else switch (dev.dev_type) {
-				case ASIC_BOARD_8GE:
-				case ASIC_BOARD_ERICSSON:
-					start = MIN_DIE_FREQ_REVB;
-					end = MAX_DIE_FREQ_REVB;
 					break;
-				case ASIC_BOARD_4GE:
+				case ASIC_BOARD_JUPITER_REVB:
+				case ASIC_BOARD_JUPITER_ERICSSON:
+					start = MIN_DIE_FREQ_JUPITER_REVB;
+					end = MAX_DIE_FREQ_JUPITER_REVB;
+					break;
+				case ASIC_BOARD_JUPITER_REVA:
+					start = MIN_DIE_FREQ_JUPITER_REVA;
+					end = MAX_DIE_FREQ_JUPITER_REVB;
+					break;
 				default:
 					break;
 				}
@@ -1120,20 +1159,28 @@ int main(int argc, char *argv[])
 
 				/* valid-die-frequencies */
 				printf("\"valid_die_frequencies\" : \n[\n");
-				start = MIN_DIE_FREQ_REVA;
-				end = MAX_DIE_FREQ_REVA;
 				step = DIE_FREQ_STEP;
-				if (dev.dev_neptune) {
+				switch (dev.dev_type) {
+				case ASIC_BOARD_TITAN:
+					start = MIN_DIE_FREQ_TITAN;
+					end = MAX_DIE_FREQ_TITAN;
+					break;
+				case ASIC_BOARD_NEPTUNE:
 					start = MIN_DIE_FREQ_NEPTUNE;
 					end = MAX_DIE_FREQ_NEPTUNE;
-				} else switch (dev.dev_type) {
-				case ASIC_BOARD_8GE:
-				case ASIC_BOARD_ERICSSON:
-					start = MIN_DIE_FREQ_REVB;
-					end = MAX_DIE_FREQ_REVB;
 					break;
-				case ASIC_BOARD_4GE:
+				case ASIC_BOARD_JUPITER_REVB:
+				case ASIC_BOARD_JUPITER_ERICSSON:
+					start = MIN_DIE_FREQ_JUPITER_REVB;
+					end = MAX_DIE_FREQ_JUPITER_REVB;
+					break;
+				case ASIC_BOARD_JUPITER_REVA:
+					start = MIN_DIE_FREQ_JUPITER_REVA;
+					end = MAX_DIE_FREQ_JUPITER_REVA;
+					break;
 				default:
+					start = 0;
+					end = 0;
 					break;
 				}
 				for (freq = start; freq <= end; freq += step) {
