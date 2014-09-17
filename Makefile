@@ -1,10 +1,20 @@
-CFLAGS=-g -O0 -W -Wall -Werror -I.
+CFLAGS=-g -O0 -W -Wall -Werror -I. $(DEFINES)
 
-LDLIBS=-lz
+LDLIBS=
 
 BINARIES = asic knc-serial io-pwr knc-led RPi_gpio_pud
 
-.PHONY: waas
+.PHONY: waas raspberry beaglebone backplane all
+
+default: beaglebone
+
+raspberry: DEFINES+=-DCONTROLLER_BOARD_RPI
+beaglebone: DEFINES+=-DCONTROLLER_BOARD_BBB
+backplane: DEFINES+=-DCONTROLLER_BOARD_BACKPLANE
+
+raspberry: all
+beaglebone: all
+backplane: all
 
 all: $(BINARIES) waas
 
@@ -15,7 +25,7 @@ knc-led: knc-asic.o knc-spimux.o knc-transport-spimux.o logging.o
 io-pwr: i2c.o tps65217.o
 
 waas:
-	make -C waas
+	$(MAKE) -C waas DEFINES="$(DEFINES)"
 
 clean:
 	rm -f $(BINARIES) *.o *~

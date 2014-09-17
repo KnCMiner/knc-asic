@@ -1,4 +1,4 @@
-CFLAGS=-W -Wall -O2 -Werror
+CFLAGS=-W -Wall -O2 -Werror $(DEFINES)
 
 CFLAGS +=  -I..
 

@@ -8,8 +8,6 @@
 
 #define	ARRAY_SIZE(a)		((int)(sizeof(a) / sizeof(a[0])))
 
-#define	FIRST_ASIC_I2C_BUS	2
-
 /* Hardware specs for the Neptune device */
 #define	KNC_MAX_DCDC_DEVICES	(2 * KNC_MAX_DIES_PER_ASIC)
 

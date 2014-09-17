@@ -1,5 +1,5 @@
-#ifndef _CGMINER_NEPTUNE_H
-#define _CGMINER_NEPTUNE_H 
+#ifndef _KNC_ASIC_H
+#define _KNC_ASIC_H
 #include <stdint.h>
 #include <miner.h>
 
@@ -136,4 +136,21 @@ int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, in
 /* Reset controller */
 int knc_prepare_reset(uint8_t *txbuf, int offset, int size);
 
+#ifdef CONTROLLER_BOARD_BACKPLANE
+#define FIRST_ASIC_I2C_BUS	1
 #endif
+
+#ifdef CONTROLLER_BOARD_RPI
+#define FIRST_ASIC_I2C_BUS	2
+#endif
+
+#ifdef CONTROLLER_BOARD_BBB
+#define FIRST_ASIC_I2C_BUS	1
+#endif
+
+#ifndef FIRST_ASIC_I2C_BUS
+#warning Unspecified controller board
+#define FIRST_ASIC_I2C_BUS 1
+#endif
+
+#endif /* _KNC_ASIC_H */

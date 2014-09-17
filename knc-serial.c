@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include "knc-asic.h"
+
 static void print_usage(const char *prog)
 {
 	printf("Usage: %s [-v] [command,..]\n", prog);
@@ -53,7 +55,7 @@ static void parse_opts(int argc, char *argv[])
 		case 'a':
 			opt_mode = MODE_ASIC;
 			static char asic_device[16];
-			sprintf(asic_device, "%d-%s", atoi(optarg)+3, "0050");
+			sprintf(asic_device, "%d-%s", atoi(optarg)+FIRST_ASIC_I2C_BUS, "0050");
 			if (!opt_device)
 				opt_device = asic_device;
 			break;
