@@ -15,6 +15,7 @@ sudo ln -sf $PWD/ioboard.sh /etc/init.d/
 sudo ln -sf $PWD/factory-setup.sh /etc/init.d/
 sudo ln -sf $PWD/bfgminer.sh /etc/init.d/
 sudo ln -sf $PWD/repartition.sh /etc/init.d/
+sudo ln -sf $PWD/lcd-loop.sh /etc/init.d/
 sudo ln -sf $PWD/lcd /etc/dhcp/dhclient-exit-hooks.d/
 sudo ln -sf $PWD/lcd-loop /usr/bin/
 sudo ln -sf $PWD/get_asic_stats.awk /usr/bin/
@@ -23,3 +24,4 @@ sudo update-rc.d ioboard.sh defaults
 sudo update-rc.d factory-setup.sh defaults
 sudo update-rc.d bfgminer.sh defaults
 sudo update-rc.d repartition.sh defaults
+sudo update-rc.d lcd-loop.sh defaults
