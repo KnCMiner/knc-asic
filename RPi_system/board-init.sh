@@ -76,11 +76,11 @@ else
 	waas -d -o /config/advanced.conf
 fi
 
-I2CBUS=2 lcd-message --init
+lcd-message --init
 
 ip=$(ip -4 addr show eth0 | grep inet | awk '{print $2}' | cut -d/ -f1)
 if [ "$ip" != "" ]; then
-	I2CBUS=2 lcd-message $ip
+	lcd-message $ip
 else
-	I2CBUS=2 lcd-message Disconnected
+	lcd-message Disconnected
 fi

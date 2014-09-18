@@ -6,7 +6,18 @@ LOCK_SLEEP_USECS=333333
 LOCK_SLEEP_SECS=0.333333
 LOCK_SLEEP_PERIODS=15
 PATH="${PATH}:/usr/sbin"
+
+if [ -f /sys/class/gpio/gpio69/value ]; then
+# beaglebone
 I2CBUS="${I2CBUS:-3}"
+elif [ -f /sys/class/gpio/gpio21/value ]; then
+# raspberry pi
+I2CBUS="${I2CBUS:-2}"
+else
+echo "ERROR: Unknown controller board"
+exit 1
+fi
+
 
 # Make sure we have the lock
 if [ "$FLOCKER" != "$0" ]; then
