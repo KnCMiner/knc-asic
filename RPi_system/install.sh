@@ -11,6 +11,7 @@ sudo ln -sf $PWD/../io-pwr /usr/bin
 sudo ln -sf $PWD/../../spi-test/spi-test /usr/bin/
 sudo ln -sf $PWD/board-init.sh /usr/bin/
 sudo ln -sf $PWD/ioboard.sh /etc/init.d/
+sudo ln -sf $PWD/bfgminer.sh /etc/init.d/
 
 sudo update-rc.d ioboard.sh defaults
-
+sudo update-rc.d bfgminer.sh defaults
