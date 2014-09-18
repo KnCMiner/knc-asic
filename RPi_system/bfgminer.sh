@@ -2,7 +2,7 @@
 
 ### BEGIN INIT INFO
 # Provides:          bfgminer
-# Required-Start:    ioboard
+# Required-Start:    ioboard factorysetup
 # Required-Stop:
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6

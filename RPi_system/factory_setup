@@ -30,6 +30,7 @@ SERIAL5=`knc-serial -a5`
 
 neptune=0
 jupiter=0
+titan=0
 board() {
 	case "$1" in
 	N*)
@@ -62,56 +63,33 @@ show_system()
 	lcd-message -l 2 "$local_ip"
 }
 
-model=Alien-$neptune.$jupiter
-case $neptune.$jupiter in
-0.0)	model=EmptySpace
+model=Alien-$titan.$neptune.$jupiter
+case $titan.$neptune.$jupiter in
+0.0.0)	model=EmptySpace
 	;;
-0.2)
+0.0.2)
 	model=Saturn
 	;;
-0.4)
+0.0.4)
 	model=Jupiter
 	;;
-5.0)
+0.5.0)
 	model=Neptune
 	;;
-1.0)
+0.1.0)
 	model=Neptune1
 	;;
+*.0.0)
+        model=Titan$titan
+        ;;
 *)
 	show_boards
 esac
 
-installed_release=`cat /etc/knc-release`
-check_release=`curl -s -f http://192.168.100.1/install/$model.release`
-if [ -z "$check_release" ]; then
-	check_release=`curl -s -f http://192.168.100.1/install.release`
-fi
-
-if [ -n "$check_release" ] && [ "$check_release" != "$installed_release" ]; then
-	lcd-message Upgrade needed
-	rm -rf /tmp/install
-	mkdir /tmp/install
-	cd /tmp/install
-	curl -s http://192.168.100.1/install/$check_release.bin | tar zxvf -
-	lcd-message Upgrading..
-	if ./runme.sh; then
-		reboot.safe
-	fi
-	lcd-message Failed upgrade
-	exit 1
-fi
-
-if [ -z "$check_release" ]; then
-	echo "NOTICE: no upgrade server found"
-else
-	echo "Software up to date"
-fi
-
 rm -rf /tmp/install
 mkdir /tmp/install
 cd /tmp/install
-curl -s http://192.168.100.1/install/factory_test.bin | tar zxvf - 2>/dev/null
+curl -s http://192.168.100.1/install/factory_test_titan.bin | tar zxvf - 2>/dev/null
 if [ -f runme.sh ]; then
 	. ./runme.sh
 fi
@@ -125,8 +103,7 @@ cat << EOF
       "user": "$cf_workerid",
       "pass": "$cf_workerpass"
     }
-  ],
-  "api-allow": "W:0/0"
+  ]
 }
 EOF
 }
