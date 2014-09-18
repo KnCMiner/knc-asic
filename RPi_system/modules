@@ -4,4 +4,5 @@
 # at boot time, one per line. Lines beginning with "#" are ignored.
 # Parameters can be specified after the module name.
 
+spi-bcm2708
 i2c-dev
