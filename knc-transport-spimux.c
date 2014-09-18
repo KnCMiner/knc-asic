@@ -18,8 +18,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "logging.h"
-#include "miner.h"
+#include <logging.h>
+#include <miner.h>
 #include "hexdump.c"
 #include "knc-transport.h"
 

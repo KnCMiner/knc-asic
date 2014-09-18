@@ -21,8 +21,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "miner.h"
-#include "logging.h"
+#include <miner.h>
+#include <logging.h>
 
 #include "knc-asic.h"
 #include "knc-transport.h"

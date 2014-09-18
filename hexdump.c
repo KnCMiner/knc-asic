@@ -29,11 +29,12 @@ static char nibble[] = {
 
 #define BYTES_PER_LINE 0x10
 
-static void hexdump(const uint8_t *p, unsigned int len)
+void hexdump(const void *p_, unsigned int len)
 {
 	unsigned int i, addr;
 	unsigned int wordlen = 4;
 	unsigned char v, line[BYTES_PER_LINE * 5];
+	const uint8_t *p = p_;
 
 	for (addr = 0; addr < len; addr += BYTES_PER_LINE) {
 		/* clear line */

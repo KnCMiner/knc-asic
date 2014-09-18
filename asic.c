@@ -8,7 +8,7 @@
 
 #include "knc-transport.h"
 
-#include "logging.h"
+#include <logging.h>
 
 #define UNUSED __attribute__((unused))
 

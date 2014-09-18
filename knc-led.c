@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "miner.h"
+#include <miner.h>
 #include "knc-asic.h"
 #include "knc-transport.h"
-#include "logging.h"
+#include <logging.h>
 
 int main(int argc, char **argv)
 {
