@@ -32,7 +32,7 @@ set -e
 test -x "$DAEMON" || exit 0
 
 do_start() {
-	start-stop-daemon -b -S -x /usr/bin/screen -- -S cgminer -t cgminer -m -d "$DAEMON" --api-listen -c /config/cgminer.conf $EXTRA_OPT
+	start-stop-daemon -b -S -x /usr/bin/screen -- -S cgminer -t cgminer -m -d "$DAEMON" --api-listen -c /config/cgminer.conf $EXTRA_OPT --scrypt -S titan:auto
 }
 
 do_stop() {
