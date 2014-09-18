@@ -7,7 +7,10 @@ BINARIES = asic knc-serial io-pwr knc-led RPi_gpio_pud
 
 .PHONY: waas raspberry beaglebone backplane all
 
-default: beaglebone
+unspecified:
+	@echo "ERROR: You need to specify which board to build for"
+	@echo "beaglebone	Beaglebone black controller"
+	@echo "raspberry	Raspberry Pi controller"
 
 raspberry: DEFINES+=-DCONTROLLER_BOARD_RPI
 beaglebone: DEFINES+=-DCONTROLLER_BOARD_BBB
