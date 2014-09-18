@@ -70,7 +70,11 @@ fi
 knc-led 0 1 0
 
 # Run waas
-waas
+if [ -f /config/advanced.conf ]; then
+	waas
+else
+	waas -d -o /config/advanced.conf
+fi
 
 I2CBUS=2 lcd-message --init
 

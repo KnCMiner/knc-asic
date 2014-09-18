@@ -16,7 +16,7 @@ if [ -f /config/miner.conf ]; then
 	. /config/miner.conf
 fi
 if [ "$use_bfgminer" = true ] ; then
-	DAEMON=/usr/bin/bfgminer
+	DAEMON=/home/rpi/bfgminer/bfgminer
 	NAME=bfgminer
 	DESC="BFGMiner daemon"
 	EXTRA_OPT="-S knc:auto"
