@@ -1,4 +1,4 @@
 
 if [ "$reason" = "BOUND" ]; then
-	lcd-message "$new_ip_address"
+	I2CBUS=2 lcd-message "$new_ip_address"
 fi

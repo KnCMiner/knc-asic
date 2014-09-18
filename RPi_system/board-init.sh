@@ -72,11 +72,11 @@ knc-led 0 1 0
 # Run waas
 waas
 
-lcd-message --init
+I2CBUS=2 lcd-message --init
 
 ip=$(ip -4 addr show eth0 | grep inet | awk '{print $2}' | cut -d/ -f1)
 if [ "$ip" != "" ]; then
-	lcd-message $ip
+	I2CBUS=2 lcd-message $ip
 else
-	lcd-message Disconnected
+	I2CBUS=2 lcd-message Disconnected
 fi
