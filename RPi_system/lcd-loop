@@ -10,5 +10,5 @@ while true ; do
 
   lcd-message $(cat /etc/knc-release)
   sleep 1
-  lcd-message $(/home/pi/bfgminer/bfgminer-rpc | sed -n -e 's/^.*\[MHS 1m\][^0123456789]\+\([0123456789]\+\).*$/\1/p') MHs
+  lcd-message $(/home/pi/bfgminer/bfgminer-rpc | sed -n -e 's/^.*\[MHS 20s\][^0123456789]\+\([0123456789]\+\).*$/\1/p') MHs
 done
