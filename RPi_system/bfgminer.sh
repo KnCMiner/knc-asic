@@ -36,7 +36,7 @@ do_start() {
 }
 
 kill_sessions() {
-	for session in $(su pi -c "screen -ls | grep -o '[0-9]\{5\}'")
+	for session in $(su pi -c "screen -ls cgminer | awk '/cgminer/ {print \$1}'")
 	do
 		su pi -c "screen -S "${session}" -X quit";
 	done
