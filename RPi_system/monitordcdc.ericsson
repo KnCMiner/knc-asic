@@ -227,15 +227,15 @@ while true; do
 	if [[ ${hardware_changed} ]] ; then
 		waas -c /config/advanced.conf >/dev/null 2>&1
 		echo [$(date +"%F %T")] waas re-run >> $LOG_FILE
-		for cmd in $cgminer_cmds ; do
-			echo $cmd | timeout -t 15 nc localhost 4028 2>/dev/null >> $LOG_FILE
-			if [[ $? -gt 100 ]] ; then
+		#for cmd in $cgminer_cmds ; do
+		#	echo $cmd | timeout -t 15 nc localhost 4028 2>/dev/null >> $LOG_FILE
+		#	if [[ $? -gt 100 ]] ; then
 				# Timeout; cgminer hangs, restart it
 				restart_cgminer=1
-				break
-			fi
-			echo >> $LOG_FILE
-		done
+		#		break
+		#	fi
+		#	echo >> $LOG_FILE
+		#done
 		if [[ ${restart_cgminer} ]] ; then
                        echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
                        /etc/init.d/bfgminer.sh restart
