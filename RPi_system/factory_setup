@@ -113,8 +113,6 @@ EOF
 do_configure()
 {
 	cgminer_conf > /config/cgminer.conf
-	lcd-message -l 1 Configured
-	lcd-message -l 2 $cf_shipmentid
 	sync
 	arg="done=1"
 	for cf in `cat /config/factory.conf | sed -e 's/^cf_//' -e 's/=.*//'`; do
@@ -122,6 +120,8 @@ do_configure()
 		arg="${arg}&$cf=$value"
 	done
 	curl -s "http://192.168.100.1:8080/done?serialno=$SERIAL_IO&shipmentid=$cf_shipmentid"
+	lcd-message -l 1 Configured
+	lcd-message -l 2 $cf_shipmentid
 	i2cset -y 1 0x24 0xb 0x6b
 	i2cset -y 1 0x24 0x16 0
 	poweroff
