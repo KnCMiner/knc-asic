@@ -155,3 +155,6 @@ while factory_reset_mode; do
 	show_system
 	sleep 1
 done
+
+rm -f /config/advanced.conf
+
