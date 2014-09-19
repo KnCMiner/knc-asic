@@ -20,7 +20,7 @@ fi
 
 
 # Make sure we have the lock
-if [ "$FLOCKER" != "$0" ]; then
+if false && [ "$FLOCKER" != "$0" ]; then
 	i=0
 	# A little dance to implement timeout, missing in busybox flock
 	while true; do
