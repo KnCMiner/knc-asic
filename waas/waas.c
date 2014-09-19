@@ -641,7 +641,7 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 			if ((tmp > 0) && (tmp <= KNC_MAX_DIES_PER_ASIC))
 				die = tmp - 1;
 		}
-		if (die >= 0) {
+		if (die >= 0 && dev->boards[asic_v].enabled) {
 			if (asic_v >= 0) {
 				float vf = -1000.0;
 				if (1 == sscanf(&chunk.memory[tokens[i].start],
