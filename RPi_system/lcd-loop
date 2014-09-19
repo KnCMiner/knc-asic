@@ -10,5 +10,10 @@ while true ; do
 
   lcd-message $(cat /etc/knc-release)
   sleep 1
-  lcd-message $(/home/pi/bfgminer/bfgminer-rpc | sed -n -e 's/^.*\[MHS 20s\][^0123456789]\+\([0123456789]\+\).*$/\1/p') MHs
+  MHS=$(/home/pi/bfgminer/bfgminer-rpc | sed -n -e 's/^.*\[MHS 20s\][^0123456789]\+\([0123456789]\+\).*$/\1/p')
+  if [ "x$MHS" = "x" ]; then
+    lcd-message "0 MHs"
+  else
+    lcd-message "$MHS MHs"
+  fi
 done
