@@ -580,8 +580,7 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 	struct MemoryStruct chunk;
 	jsmn_parser parser;
 	jsmntok_t tokens[256];
-	jsmnerr_t json_res;
-	bool end;
+	int json_tokens;
 	char str[4096], tmp_str[4096];
 	int asic_v, asic_f, die, tmp;
 
@@ -608,10 +607,10 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 	fclose(f);
 
 	jsmn_init(&parser);
-	json_res = jsmn_parse(&parser, chunk.memory, tokens, ARRAY_SIZE(tokens));
-	if (JSMN_SUCCESS != json_res) {
+	json_tokens = jsmn_parse(&parser, chunk.memory, tokens, ARRAY_SIZE(tokens));
+	if (json_tokens < 0) {
 		fprintf(stderr, "Can not parse JSON in config file %s: %d\n",
-			file_name, json_res);
+			file_name, json_tokens);
 		if(chunk.memory)
 			free(chunk.memory);
 		return -3;
@@ -619,19 +618,7 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 
 	asic_v = asic_f = -1;
 
-	for (i = 0; i < ARRAY_SIZE(tokens); ++i) {
-		end = false;
-		switch (tokens[i].type) {
-		case JSMN_PRIMITIVE:
-		case JSMN_OBJECT:
-		case JSMN_ARRAY:
-		case JSMN_STRING:
-			break;
-		default:
-			end = true;
-		}
-		if (end)
-			break;
+	for (i = 0; i < json_tokens; ++i) {
 		chunk.memory[tokens[i].end] = 0;
 		if (0 == i)
 			continue;

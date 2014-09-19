@@ -129,9 +129,9 @@ static jsmnerr_t jsmn_parse_string(jsmn_parser *parser, const char *js,
 }
 
 /**
- * Parse JSON string and fill tokens.
+ * Parse JSON string and fill tokens. Returns number of tokens found.
  */
-jsmnerr_t jsmn_parse(jsmn_parser *parser, const char *js, jsmntok_t *tokens, 
+int jsmn_parse(jsmn_parser *parser, const char *js, jsmntok_t *tokens, 
 		unsigned int num_tokens) {
 	jsmnerr_t r;
 	int i;
@@ -240,7 +240,7 @@ jsmnerr_t jsmn_parse(jsmn_parser *parser, const char *js, jsmntok_t *tokens,
 		}
 	}
 
-	return JSMN_SUCCESS;
+	return parser->toknext;
 }
 
 /**
