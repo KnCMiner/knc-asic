@@ -14,15 +14,28 @@ NAME=repartition
 DESC="SD card repartition check"
 
 FLAGFILE1="/etc/repartition-step1"
-FLAGFILE2="/etc/repartition-step1"
-TABLEFILE="/etc/table.sfdisk"
+FLAGFILE2="/etc/repartition-step2"
 DISK="/dev/mmcblk0"
 PARTITION="/dev/mmcblk0p2"
+
+print_table() {
+
+    cat <<EOF
+# partition table of /dev/mmcblk0
+unit: sectors
+
+/dev/mmcblk0p1 : start=     8192, size=   114688, Id= c
+/dev/mmcblk0p2 : start=   122880, size=         , Id=83
+/dev/mmcblk0p3 : start=        0, size=        0, Id= 0
+/dev/mmcblk0p4 : start=        0, size=        0, Id= 0
+EOF
+
+}
 
 do_check() {
 
     if [ -f $FLAGFILE1 ]; then
-        cat $TABLEFILE | sfdisk $DISK
+        print_table | sfdisk --no-reread $DISK
         touch $FLAGFILE2
         rm -f $FLAGFILE1
         reboot
