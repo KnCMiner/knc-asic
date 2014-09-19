@@ -39,6 +39,8 @@ board() {
 	A*|B*)
 		jupiter=$((jupiter + 1))
 		;;
+	T*)
+		titan=$((titan + 1))
 	esac
 }
 
@@ -126,6 +128,7 @@ do_configure()
 }
 
 while factory_reset_mode; do
+	rm -f /config/factory-test # unlock debug mode
 	lcd-message "$model"
 	curl -s "http://192.168.100.1:8080/getconfig?serialno=$SERIAL_IO&serialbb=$SERIAL_BB&model=$model&asic1=$SERIAL0&asic2=$SERIAL1&asic3=$SERIAL2&asic4=$SERIAL3&asic5=$SERIAL4&asic6=$SERIAL5" | sed -e 's/^{//' -e 's/^}//' -e 's/^ *"/cf_/' -e 's/, *$//' -e 's/": /=/' > /config/factory.conf
 	cat /config/factory.conf
