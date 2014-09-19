@@ -16,7 +16,6 @@ sudo ln -sf $PWD/factory-setup.sh /etc/init.d/
 sudo ln -sf $PWD/bfgminer.sh /etc/init.d/
 sudo ln -sf $PWD/repartition.sh /etc/init.d/
 sudo ln -sf $PWD/lcd-loop.sh /etc/init.d/
-sudo ln -sf $PWD/lcd /etc/dhcp/dhclient-exit-hooks.d/
 sudo ln -sf $PWD/lcd-loop /usr/bin/
 sudo ln -sf $PWD/get_asic_stats.awk /usr/bin/
 sudo ln -sf $PWD/monitordcdc.ericsson /sbin/

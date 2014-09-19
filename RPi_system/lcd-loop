@@ -16,4 +16,12 @@ while true ; do
   else
     lcd-message "$MHS MHs"
   fi
+
+  ip=$(ip -4 addr show eth0 | grep inet | awk '{print $2}' | cut -d/ -f1)
+  if [ "$ip" != "" ]; then
+    lcd-message -l 2 "$ip"
+  else
+    lcd-message -l 2 "Disconnected"
+  fi
+
 done

@@ -77,10 +77,3 @@ else
 fi
 
 lcd-message --init
-
-ip=$(ip -4 addr show eth0 | grep inet | awk '{print $2}' | cut -d/ -f1)
-if [ "$ip" != "" ]; then
-	lcd-message $ip
-else
-	lcd-message Disconnected
-fi
