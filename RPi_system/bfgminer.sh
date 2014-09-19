@@ -36,16 +36,16 @@ do_start() {
 }
 
 kill_sessions() {
-	for session in $(screen -ls | grep -o '[0-9]\{5\}')
+	for session in $(su pi -c "screen -ls | grep -o '[0-9]\{5\}'")
 	do
-		screen -S "${session}" -X quit;
+		su pi -c "screen -S "${session}" -X quit";
 	done
 }
 
 do_stop() {
-	killall -9 bfgminer cgminer 2>/dev/null || true
-	killall -9 bfgminer cgminer 2>/dev/null || true
 	kill_sessions
+	killall -9 bfgminer cgminer 2>/dev/null || true
+	killall -9 bfgminer cgminer 2>/dev/null || true
 }
 
 case "$1" in
