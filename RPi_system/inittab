@@ -72,4 +72,4 @@ po::powerokwait:/etc/init.d/powerfail stop
 T0:23:respawn:/sbin/getty -L ttyAMA0 115200 vt100
 
 #Run monitordcdc
-MONDCDC:23:respawn:/sbin/monitordcdc.ericsson
+DCDC:23:respawn:/sbin/monitordcdc.ericsson
