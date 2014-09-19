@@ -323,10 +323,4 @@ while true; do
 	done
 
 	sleep 4
-
-	a="$(ps | grep bfgminer | grep -v 'grep bfgminer')"
-	if [ -z "$a" ] ; then
-               echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
-               /etc/init.d/bfgminer.sh restart
-	fi
 done
