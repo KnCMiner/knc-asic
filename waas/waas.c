@@ -167,9 +167,9 @@ static void detect_device_type(struct device_t *dev, bool write_to_file)
 
 		switch (board->type) {
 		case ASIC_BOARD_TITAN:
-			dev->freq_start[asic] = MIN_DIE_FREQ_NEPTUNE;
-			dev->freq_end[asic] = MAX_DIE_FREQ_NEPTUNE;
-			dev->freq_default[asic] = DEFAULT_DIE_FREQ_NEPTUNE;
+			dev->freq_start[asic] = MIN_DIE_FREQ_TITAN;
+			dev->freq_end[asic] = MAX_DIE_FREQ_TITAN;
+			dev->freq_default[asic] = DEFAULT_DIE_FREQ_TITAN;
 			break;
 		case ASIC_BOARD_NEPTUNE:
 			dev->freq_start[asic] = MIN_DIE_FREQ_NEPTUNE;
