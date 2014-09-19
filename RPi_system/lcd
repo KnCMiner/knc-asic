@@ -1,4 +1,6 @@
 
-if [ "$reason" = "BOUND" ]; then
+if [ "$reason" = "BOUND" || "$reason" = "RENEW" || "$reason" = "REBIND" || "$reason" = "REBOOT" ]; then
 	lcd-message "$new_ip_address"
+elif [ "$reason" = "EXPIRE" || "$reason" = "FAIL" || "$reason" = "STOP" || "$reason" = "RELEASE" ]; then
+	lcd-message "Disconnected"
 fi
