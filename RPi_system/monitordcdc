@@ -1,0 +1,17 @@
+#!/bin/sh
+
+if [ -f /etc/revision ] ; then
+	. /etc/revision
+else
+	DEVICE=AG
+fi
+
+case $DEVICE in
+	AE|BE|NE|TI)
+		exec /sbin/monitordcdc.ericsson
+	;;
+	*)
+		exec /sbin/monitordcdc.ge
+	;;
+esac
+
