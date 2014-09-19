@@ -35,9 +35,19 @@ do_start() {
 	start-stop-daemon -b -S -c pi -d $(dirname "$DAEMON") -x /usr/bin/screen -- -S cgminer -t cgminer -m -d sh -c "while true; do $DAEMON --api-listen -c /config/cgminer.conf $EXTRA_OPT --scrypt -S titan:auto; sleep 1; done"
 }
 
+kill_sessions() {
+	for session in $(screen -ls | grep -o '[0-9]\{5\}')
+	do
+		screen -S "${session}" -X quit;
+	done
+}
+
 do_stop() {
 	killall -9 bfgminer cgminer 2>/dev/null || true
+	killall -9 bfgminer cgminer 2>/dev/null || true
+	kill_sessions
 }
+
 case "$1" in
   start)
         echo -n "Starting $DESC: "
