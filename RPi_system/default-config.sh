@@ -2,7 +2,7 @@
 
 ### BEGIN INIT INFO
 # Provides:          defaultconfig
-# Required-Start:
+# Required-Start:    checkroot
 # Required-Stop:
 # Default-Start:     S
 # Default-Stop:
