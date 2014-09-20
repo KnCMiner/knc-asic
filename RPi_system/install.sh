@@ -24,9 +24,9 @@ sudo ln -sf $PWD/../spimux-titan.rbf /etc/spimux.rbf
 
 sudo cp inittab /etc/
 
-sudo update-rc.d default-config.sh defaults
+sudo update-rc.d default-config.sh start 11 S .
 sudo update-rc.d ioboard.sh defaults
 sudo update-rc.d factory-setup.sh defaults
 sudo update-rc.d bfgminer.sh defaults
-sudo update-rc.d repartition.sh defaults
+sudo update-rc.d repartition.sh start 11 S .
 sudo update-rc.d lcd-loop.sh defaults
