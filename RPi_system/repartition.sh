@@ -4,8 +4,8 @@
 # Provides:          repartition
 # Required-Start:
 # Required-Stop:
-# Default-Start:     2 3 4 5
-# Default-Stop:      0 1 6
+# Default-Start:     S
+# Default-Stop:
 # Short-Description: Re-partitions SD card at first boot
 ### END INIT INFO
 
