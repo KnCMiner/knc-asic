@@ -13,8 +13,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 NAME=repartition
 DESC="SD card repartition check"
 
-FLAGFILE1="/etc/repartition-step1"
-FLAGFILE2="/etc/repartition-step2"
+FLAGFILE1="/repartition"
+FLAGFILE2="/repartition-step2"
 DISK="/dev/mmcblk0"
 PARTITION="/dev/mmcblk0p2"
 
