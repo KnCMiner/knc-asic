@@ -5,10 +5,7 @@ factory_reset_mode()
 	if [ -f /config/factory-test ]; then
 		return 0
 	fi
-	if [ -f /config/network.conf ]; then
-		return 1
-	fi
-	if [ -f /config/cgminer.conf ]; then
+	if ! cmp -s /etc/shadow.default /etc/shadow; then
 		return 1
 	fi
 	return 0
