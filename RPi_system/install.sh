@@ -21,6 +21,7 @@ sudo ln -sf $PWD/lcd-loop /usr/bin/
 sudo ln -sf $PWD/get_asic_stats.awk /usr/bin/
 sudo ln -sf $PWD/monitordcdc.ericsson /sbin/
 sudo ln -sf $PWD/../spimux-titan.rbf /etc/spimux.rbf
+sudo ln -sf $PWD/i2c-loop /usr/bin/
 
 sudo cp inittab /etc/
 
