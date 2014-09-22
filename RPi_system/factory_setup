@@ -16,7 +16,7 @@ if ! factory_reset_mode; then
 fi
 
 . /etc/revision
-SERIAL_BB=`knc-serial -b`
+SERIAL_BB=`ip link show eth0 | awk '/ether/{gsub(":",""); print $2}'`
 SERIAL_IO=`knc-serial -i`
 SERIAL0=`knc-serial -a0`
 SERIAL1=`knc-serial -a1`
