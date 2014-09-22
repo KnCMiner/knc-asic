@@ -19,7 +19,7 @@ if [ "$use_bfgminer" = true ] ; then
 	DAEMON=/home/pi/bfgminer/bfgminer
 	NAME=bfgminer
 	DESC="BFGMiner daemon"
-	EXTRA_OPT="-S knc:auto"
+	EXTRA_OPT="-q 10"
 else
 	DAEMON=/usr/bin/cgminer
 	NAME=cgminer
