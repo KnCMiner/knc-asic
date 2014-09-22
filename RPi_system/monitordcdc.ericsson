@@ -3,7 +3,7 @@
 LOG_FILE="/var/log/monitordcdc.log"
 
 INTERVAL=5
-THRESHOLD=3
+THRESHOLD=4
 IOUT_THRESHOLD_AMPS=5
 DEFAULT_MHZ=300
 
@@ -150,18 +150,24 @@ while true; do
 			done
 		fi
 
-		for d in 0 1 2 3 4 5 6 7; do
-			q=$((d/2))
-                        cnt=$(cat /var/run/die${channel}${q} 2>/dev/null)
-                        if [ -z "$cnt" ] ; then
-                                cnt=0
-                        fi
-                        iout_dcdc $bus $d
-			if [ $iout -lt $IOUT_THRESHOLD_AMPS ]; then
+		for q in 0 1 2 3; do
+			fail=
+			cnt=$(cat /var/run/die${channel}${q} 2>/dev/null)
+			if [ -z "$cnt" ] ; then
+				cnt=0
+			fi
+			for d in $((2*q)) $((2*q+1)) ; do
+				iout_dcdc $bus $d
+				sleep 1
+				if [ $iout -lt $IOUT_THRESHOLD_AMPS ]; then
+					fail=1
+					break
+				fi
+			done
+			if [[ $fail ]] ; then
 				cnt=$((cnt+1))
 			fi
 			echo $cnt > /var/run/die${channel}${q}
-			sleep 1
 		done
 	done
 
