@@ -5,6 +5,9 @@ factory_reset_mode()
 	if [ -f /config/factory-test ]; then
 		return 0
 	fi
+	if [ -f /config/.configured ] ; then
+		return 1
+	fi
 	if ! cmp -s /etc/shadow.default /etc/shadow; then
 		return 1
 	fi
@@ -116,6 +119,7 @@ do_configure()
 		eval "value=\"\$cf_$cf\""
 		arg="${arg}&$cf=$value"
 	done
+	touch /config/.configured
 	curl -s "http://192.168.100.1:8080/done?serialno=$SERIAL_IO&shipmentid=$cf_shipmentid"
 	lcd-message -l 1 Configured
 	lcd-message -l 2 $cf_shipmentid
