@@ -18,6 +18,22 @@ if ! factory_reset_mode; then
 	exit 0
 fi
 
+show_boards()
+{
+	lcd-message -l 1 $model
+	lcd-message -l 2 `echo $BOARD0$BOARD1$BOARD2$BOARD3$BOARD4$BOARD5 | sed -e 's/OFF/__/g'`
+}
+
+show_system()
+{
+	lcd-message -l 1 "* `cat /etc/knc-release`"
+	local_net="$(ip addr show eth0 | sed -n 's/^.*inet[[:space:]]*\([^[:space:]]*\)[[:space:]].*$/\1/p')"
+	local_ip=${local_net%%/*}
+	lcd-message -l 2 "$local_ip"
+}
+
+show_system
+
 . /etc/revision
 SERIAL_BB=`ip link show eth0 | awk '/ether/{gsub(":",""); print $2}'`
 SERIAL_IO=`knc-serial -i`
@@ -50,20 +66,6 @@ board $BOARD2
 board $BOARD3
 board $BOARD4
 board $BOARD5
-
-show_boards()
-{
-	lcd-message -l 1 $model
-	lcd-message -l 2 `echo $BOARD0$BOARD1$BOARD2$BOARD3$BOARD4$BOARD5 | sed -e 's/OFF/__/g'`
-}
-
-show_system()
-{
-	lcd-message -l 1 "* `cat /etc/knc-release`"
-	local_net="$(ip addr show eth0 | sed -n 's/^.*inet[[:space:]]*\([^[:space:]]*\)[[:space:]].*$/\1/p')"
-	local_ip=${local_net%%/*}
-	lcd-message -l 2 "$local_ip"
-}
 
 model=Alien-$titan.$neptune.$jupiter
 case $titan.$neptune.$jupiter in
