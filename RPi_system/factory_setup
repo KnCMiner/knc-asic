@@ -124,6 +124,7 @@ do_configure()
 	lcd-message -l 2 $cf_shipmentid
 	i2cset -y 1 0x24 0xb 0x6b
 	i2cset -y 1 0x24 0x16 0
+	rm -f /config/advanced.conf
 	poweroff
 }
 
@@ -155,6 +156,4 @@ while factory_reset_mode; do
 	show_system
 	sleep 1
 done
-
-rm -f /config/advanced.conf
 
