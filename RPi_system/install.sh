@@ -22,6 +22,8 @@ sudo ln -sf $PWD/get_asic_stats.awk /usr/bin/
 sudo ln -sf $PWD/monitordcdc.ericsson /sbin/
 sudo ln -sf $PWD/../spimux-titan.rbf /etc/spimux.rbf
 sudo ln -sf $PWD/i2c-loop /usr/bin/
+sudo ln -sf $PWD/lcd-print_stopping.sh /etc/init.d/lcd-print_stopping.sh
+sudo ln -sf $PWD/lcd-print_rebooting.sh /etc/init.d/lcd-print_rebooting.sh
 
 sudo cp inittab /etc/
 
@@ -31,3 +33,5 @@ sudo update-rc.d factory-setup.sh defaults
 sudo update-rc.d bfgminer.sh defaults
 sudo update-rc.d repartition.sh start 11 S .
 sudo update-rc.d lcd-loop.sh defaults
+sudo update-rc.d lcd-print_stopping.sh stop 02 0
+sudo update-rc.d lcd-print_rebooting.sh stop 02 6
