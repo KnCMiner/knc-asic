@@ -377,19 +377,42 @@ static int do_print_running_info(FILE *f, struct device_t *dev)
 			temp = -1000.0;
 		}
 		i2c_disconnect(i2c_bus);
-		/* Read die frequencies */
+		/* Read die frequencies and offsets */
 		if ((MFRID_GE == board_mfrid) || (MFRID_ERICSSON == board_mfrid)) {
 			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die)
 				die_freq[die] = read_die_freq(asic, die);
+			i2c_bus = i2c_connect(FIRST_ASIC_I2C_BUS + asic);
 			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
 				int data = die_freq[die];
 				if ((data < dev->freq_start[asic]) || (data > dev->freq_end[asic]))
 					data = dev->freq_default[asic];
 				fprintf(f, "\t\"die%d_Freq\": \"%d\",\n", die, data);
+
+				bool voffset_valid = false;
+				if (0 <= i2c_bus) {
+					dcdc = get_primary_dcdc_addr_for_die(die) - DCDC_BASE_ADDR;
+					i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
+					voffset_valid = true;
+					if (MFRID_ERICSSON == board_mfrid) {
+						data = pmbus_get_vout_cmd_ericsson(i2c_bus);
+						voffset_valid = (0 <= data);
+						data -= ERICSON_FACTORY_VOUT_VALUE;
+					} else {
+						data = pmbus_get_vout_trim(i2c_bus, 0);
+					}
+				}
+				if (voffset_valid)
+					fprintf(f, "\t\"die%d_Voffset\": \"%1.4f\",\n", die, dcdc_voltage_from_offset(board_mfrid, data));
+				else
+					fprintf(f, "\t\"die%d_Voffset\": \"\",\n", die);
 			}
+			if (0 <= i2c_bus)
+				i2c_disconnect(i2c_bus);
 		} else {
-			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die)
+			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
 				fprintf(f, "\t\"die%d_Freq\": \"\",\n", die);
+				fprintf(f, "\t\"die%d_Voffset\": \"\",\n", die);
+			}
 		}
 		/* Print out previously read temperature */
 		if (-500.0 < temp)
