@@ -3,6 +3,7 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 LOG_FILE="/var/log/monitordcdc.log"
 WAAS_ASIC_INFO_TMP="/var/run/.waas_asic_info_tmp$$"
+WAAS_CACHE_TMP="/var/run/.waas_cache$$"
 WAAS_CACHE="/var/run/.waas_cache"
 
 fail=0
@@ -12,5 +13,7 @@ while true ; do
   /usr/bin/waas -g all-asic-info >$WAAS_ASIC_INFO_TMP 2>/dev/null
   cat /etc/revision >> $WAAS_ASIC_INFO_TMP 2>/dev/null
   cat $WAAS_CACHE >> $WAAS_ASIC_INFO_TMP 2>/dev/null
-  /usr/bin/asic_data_cache.awk $WAAS_ASIC_INFO_TMP > $WAAS_CACHE 2>/dev/null
+  /usr/bin/asic_data_cache.awk $WAAS_ASIC_INFO_TMP >$WAAS_CACHE_TMP 2>/dev/null
+  # now atomically move file
+  mv $WAAS_CACHE_TMP $WAAS_CACHE
 done
