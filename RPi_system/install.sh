@@ -24,6 +24,7 @@ sudo ln -sf $PWD/../spimux-titan.rbf /etc/spimux.rbf
 sudo ln -sf $PWD/i2c-loop /usr/bin/
 sudo ln -sf $PWD/lcd-print_stopping.sh /etc/init.d/lcd-print_stopping.sh
 sudo ln -sf $PWD/lcd-print_rebooting.sh /etc/init.d/lcd-print_rebooting.sh
+sudo ln -sf $PWD/asic_data_cache.awk /usr/bin/
 
 sudo cp inittab /etc/
 
