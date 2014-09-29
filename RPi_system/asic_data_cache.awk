@@ -115,6 +115,7 @@ END {
       asic_type_cnt[asic] = 0;
     } else {
       if (++asic_type_cnt[asic] > STALE_COUNT) {
+        asic_type_cnt[asic] = STALE_COUNT + 1;
         type = "OFF";
       } else {
         type = asic_type_cache[asic];
@@ -125,6 +126,7 @@ END {
       asic_temp_cnt[asic] = 0;
     } else {
       if (++asic_temp_cnt[asic] > STALE_COUNT) {
+        asic_temp_cnt[asic] = STALE_COUNT + 1;
         temp = 0.0;
       } else {
         temp = asic_temp_cache[asic];
@@ -136,6 +138,7 @@ END {
         asic_freq_cnt[asic, die] = 0;
       } else {
         if (++asic_freq_cnt[asic, die] > STALE_COUNT) {
+          asic_freq_cnt[asic, die] = STALE_COUNT + 1;
           freq[die] = 0.0;
         } else {
           freq[die] = asic_freq_cache[asic, die];
@@ -146,6 +149,7 @@ END {
         asic_volt_cnt[asic, die] = 0;
       } else {
         if (++asic_volt_cnt[asic, die] > STALE_COUNT) {
+          asic_volt_cnt[asic, die] = STALE_COUNT + 1;
           volt[die] = 0.0;
         } else {
           volt[die] = asic_volt_cache[asic, die];
@@ -158,6 +162,7 @@ END {
 	asic_dcdctemp_cnt[asic, dcdc] = 0;
       } else {
         if (++asic_dcdctemp_cnt[asic, dcdc] > STALE_COUNT) {
+          asic_dcdctemp_cnt[asic, dcdc] = STALE_COUNT + 1;
           dcdctemp[dcdc] = 0.0;
         } else {
           dcdctemp[dcdc] = asic_dcdctemp_cache[asic, dcdc];
@@ -168,6 +173,7 @@ END {
 	asic_dcdcVout_cnt[asic, dcdc] = 0;
       } else {
         if (++asic_dcdcVout_cnt[asic, dcdc] > STALE_COUNT) {
+          asic_dcdcVout_cnt[asic, dcdc] = STALE_COUNT + 1;
           dcdcVout[dcdc] = 0.0;
         } else {
           dcdcVout[dcdc] = asic_dcdcVout_cache[asic, dcdc];
@@ -178,6 +184,7 @@ END {
 	asic_dcdcIout_cnt[asic, dcdc] = 0;
       } else {
         if (++asic_dcdcIout_cnt[asic, dcdc] > STALE_COUNT) {
+          asic_dcdcIout_cnt[asic, dcdc] = STALE_COUNT + 1;
           dcdcIout[dcdc] = 0.0;
         } else {
           dcdcIout[dcdc] = asic_dcdcIout_cache[asic, dcdc];
