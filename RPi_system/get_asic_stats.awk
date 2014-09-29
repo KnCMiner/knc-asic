@@ -30,7 +30,7 @@ BEGIN {
 }
 
 END {
-  for (asic = 0; asic < 6; asic++) {
+  for (asic = 0; asic < NUM_ASIC; ++asic) {
     num = asic + 1;
     temp = "---";
     if ("" != asic_temp[asic])
@@ -38,7 +38,7 @@ END {
     if (temp <= 0)
       temp = "---";
     freq = 0.0;
-    for (die = 0; die < 4; die++) {
+    for (die = 0; die < NUM_DIE; ++die) {
       freq += asic_freq[asic, die];
     }
     freq /= 4.0;
@@ -46,7 +46,7 @@ END {
       freq = "---";
     dcdctemp = 0;
     dcdcnum = 0;
-    for (dcdc = 0; dcdc < 8; dcdc++) {
+    for (dcdc = 0; dcdc < NUM_DCDC; ++dcdc) {
       if ("" == asic_dcdctemp[asic, dcdc])
         continue;
       dcdctemp += asic_dcdctemp[asic, dcdc];
