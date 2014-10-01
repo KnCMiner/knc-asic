@@ -13,6 +13,7 @@ PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
 do_stop () {
 	lcd-message Rebooting...
+	/home/pi/knc-asic/stop_all_dcdcs
 }
 
 case "$1" in
