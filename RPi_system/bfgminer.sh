@@ -32,7 +32,7 @@ set -e
 test -x "$DAEMON" || exit 0
 
 do_start() {
-	start-stop-daemon -b -S -c pi -d $(dirname "$DAEMON") -x /usr/bin/screen -- -S cgminer -t cgminer -m -d sh -c "while true; do waas >/dev/null 2>/dev/null ; $DAEMON --api-listen -c /config/cgminer.conf $EXTRA_OPT --scrypt -S titan:auto; done"
+	start-stop-daemon -b -S -c pi -d $(dirname "$DAEMON") -x /usr/bin/screen -- -S cgminer -t cgminer -m -d sh -c "while true; do waas >/dev/null 2>/dev/null ; $DAEMON --api-listen --api-allow="W:127.0.0.1/24" -c /config/cgminer.conf $EXTRA_OPT --scrypt -S titan:auto; done"
 }
 
 kill_sessions() {
