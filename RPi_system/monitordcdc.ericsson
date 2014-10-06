@@ -110,7 +110,7 @@ echo 0 > /var/run/tm
 
 while true; do
 	hardware_changed=
-	cgminer_cmds=
+	miner_cmds=
 	for channel in 0 1 2 3 4 5; do
         	if [ "$BOARD_TYPE" = "bbone" ]; then
                         bus=$((channel+3))
@@ -139,14 +139,14 @@ while true; do
 						echo 0 > /var/run/die${channel}${q}
 						hardware_changed=1
 						echo [$(date +"%F %T")] Die $channel-$q came UP >> $LOG_FILE
-						cgminer_cmds="$cgminer_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:ENABLE"
+						miner_cmds="$miner_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:ENABLE"
 					fi
 				else
 					if [[ "x${detected}" != "x0" ]] ; then
 						echo 1000 > /var/run/die${channel}${q}
 						hardware_changed=1
 						echo [$(date +"%F %T")] Die $channel-$q came DOWN >> $LOG_FILE
-						cgminer_cmds="$cgminer_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:DISABLE"
+						miner_cmds="$miner_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:DISABLE"
 					fi
 				fi
 			done
@@ -160,7 +160,7 @@ while true; do
 					echo 1000 > /var/run/die${channel}${q}
 					hardware_changed=1
 					echo [$(date +"%F %T")] Die $channel-$q came DOWN '(ASIC not present)' >> $LOG_FILE
-					cgminer_cmds="$cgminer_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:DISABLE"
+					miner_cmds="$miner_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:DISABLE"
 				fi
 			done
 		fi
@@ -186,18 +186,18 @@ while true; do
 		done
 	done
 
-	restart_cgminer=
+	restart_miner=
 	if [[ ${hardware_changed} ]] ; then
-		for cmd in $cgminer_cmds ; do
+		for cmd in $miner_cmds ; do
 			echo $cmd | $NC 2>/dev/null >> $LOG_FILE
 			if [[ $? -gt 100 ]] ; then
-				# Timeout; cgminer hangs, restart it
-				restart_cgminer=1
+				# Timeout; miner hangs, restart it
+				restart_miner=1
 				break
 			fi
 			echo >> $LOG_FILE
 		done
-		if [[ ${restart_cgminer} ]] ; then
+		if [[ ${restart_miner} ]] ; then
                        echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
                        /etc/init.d/bfgminer.sh restart
 		fi
