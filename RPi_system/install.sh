@@ -27,6 +27,7 @@ sudo ln -sf $PWD/lcd-print_rebooting.sh /etc/init.d/lcd-print_rebooting.sh
 sudo ln -sf $PWD/asic_data_cache.awk /usr/bin/
 
 sudo cp inittab /etc/
+sudo cp $PWD/monitordcdc.logrotate /etc/logrotate.d/monitordcdc
 
 sudo update-rc.d default-config.sh start 11 S .
 sudo update-rc.d ioboard.sh defaults
