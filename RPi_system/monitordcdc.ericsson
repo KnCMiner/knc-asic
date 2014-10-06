@@ -15,15 +15,15 @@ echo [$(date +"%F %T")] Start >> $LOG_FILE
 
 NC="timeout -t 15 nc localhost 4028"
 if [ -f /sys/class/gpio/gpio69/value ]; then
-        echo "beagle bone board detected"
-        BOARD_TYPE="bbone"
+	echo "beagle bone board detected"
+	BOARD_TYPE="bbone"
 elif [ -f /sys/class/gpio/gpio21/value ]; then
-        echo "raspberry pi board detected"
-        BOARD_TYPE="rpi"
-        NC="timeout 15 nc localhost 4028"
+	echo "raspberry pi board detected"
+	BOARD_TYPE="rpi"
+	NC="timeout 15 nc localhost 4028"
 else
-        echo "ERROR: Unknown controller board"
-        exit 1
+	echo "ERROR: Unknown controller board"
+	exit 1
 fi
 
 reset_die() {
@@ -42,11 +42,11 @@ detect_dcdcs() {
 	lchannel=$1
 	ldie=$2
 
-        if [ "$BOARD_TYPE" = "bbone" ]; then
-                lbus=$((lchannel+3))
-        elif [ "$BOARD_TYPE" = "rpi" ]; then
-                lbus=$((lchannel+2))
-        fi
+	if [ "$BOARD_TYPE" = "bbone" ]; then
+		lbus=$((lchannel+3))
+	elif [ "$BOARD_TYPE" = "rpi" ]; then
+		lbus=$((lchannel+2))
+	fi
 
 	ldcdc1=$((ldie*2))
 	ldcdc2=$((ldcdc1+1))
@@ -80,11 +80,11 @@ iout_dcdc() {
 }
 
 for channel in 0 1 2 3 4 5 ; do
-        if [ "$BOARD_TYPE" = "bbone" ]; then
-                bus=$((channel+3))
-        elif [ "$BOARD_TYPE" = "rpi" ]; then
-                bus=$((channel+2))
-        fi
+	if [ "$BOARD_TYPE" = "bbone" ]; then
+		bus=$((channel+3))
+	elif [ "$BOARD_TYPE" = "rpi" ]; then
+		bus=$((channel+2))
+	fi
 
 	# Try detect EEPROM
 	dd if=/sys/bus/i2c/devices/${bus}-0050/eeprom of=/dev/null bs=1 count=1 1>/dev/null 2>&1
@@ -112,11 +112,11 @@ while true; do
 	hardware_changed=
 	miner_cmds=
 	for channel in 0 1 2 3 4 5; do
-        	if [ "$BOARD_TYPE" = "bbone" ]; then
-                        bus=$((channel+3))
-        	elif [ "$BOARD_TYPE" = "rpi" ]; then
-                        bus=$((channel+2))
-        	fi
+		if [ "$BOARD_TYPE" = "bbone" ]; then
+			bus=$((channel+3))
+		elif [ "$BOARD_TYPE" = "rpi" ]; then
+			bus=$((channel+2))
+		fi
 
 		asic=$((channel+1))
 
@@ -198,8 +198,8 @@ while true; do
 			echo >> $LOG_FILE
 		done
 		if [[ ${restart_miner} ]] ; then
-                       echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
-                       /etc/init.d/bfgminer.sh restart
+			echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
+			/etc/init.d/bfgminer.sh restart
 		fi
 	fi
 
@@ -216,11 +216,11 @@ while true; do
 	echo 0 > /var/run/tm
 
 	for channel in 0 1 2 3 4 5; do
-        	if [ "$BOARD_TYPE" = "bbone" ]; then
-                        bus=$((channel+3))
-	        elif [ "$BOARD_TYPE" = "rpi" ]; then
-                        bus=$((channel+2))
-	        fi
+		if [ "$BOARD_TYPE" = "bbone" ]; then
+			bus=$((channel+3))
+		elif [ "$BOARD_TYPE" = "rpi" ]; then
+			bus=$((channel+2))
+		fi
 
 		failed0=0
 		failed1=0
@@ -228,28 +228,28 @@ while true; do
 		failed3=0
 
 		for q in 0 1 2 3; do
-                        cnt=$(cat /var/run/die${channel}${q} 2>/dev/null)
-                        if [ -z "$cnt" ] ; then
-                                cnt=0
-                        fi
-                        if [ $cnt -ge 1000 ] ; then
+			cnt=$(cat /var/run/die${channel}${q} 2>/dev/null)
+			if [ -z "$cnt" ] ; then
+				cnt=0
+			fi
+			if [ $cnt -ge 1000 ] ; then
 				echo 1000 > /var/run/die${channel}${q}
 				continue
-                        fi
-			echo 0 > /var/run/die${channel}${q}
-                        if [ $cnt -le $THRESHOLD ] ; then
-				continue
-                        fi
-                        d=$((q*2))
-                        d1=$((d+1))
-                        bad_iout=0
-                        iout_dcdc $bus $d
-			if [ $iout -lt $IOUT_THRESHOLD_AMPS ]; then
-	                        bad_iout=1
 			fi
-                        iout_dcdc $bus $d1
+			echo 0 > /var/run/die${channel}${q}
+				if [ $cnt -le $THRESHOLD ] ; then
+				continue
+			fi
+			d=$((q*2))
+			d1=$((d+1))
+			bad_iout=0
+			iout_dcdc $bus $d
 			if [ $iout -lt $IOUT_THRESHOLD_AMPS ]; then
-	                        bad_iout=1
+				bad_iout=1
+			fi
+			iout_dcdc $bus $d1
+			if [ $iout -lt $IOUT_THRESHOLD_AMPS ]; then
+				bad_iout=1
 			fi
 			if [ "$bad_iout" = "0" ]; then
 				continue
