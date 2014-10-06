@@ -13,16 +13,30 @@ done
 
 echo [$(date +"%F %T")] Start >> $LOG_FILE
 
+NC="timeout -t 15 nc localhost 4028"
 if [ -f /sys/class/gpio/gpio69/value ]; then
         echo "beagle bone board detected"
         BOARD_TYPE="bbone"
 elif [ -f /sys/class/gpio/gpio21/value ]; then
         echo "raspberry pi board detected"
         BOARD_TYPE="rpi"
+        NC="timeout 15 nc localhost 4028"
 else
         echo "ERROR: Unknown controller board"
         exit 1
 fi
+
+reset_die() {
+	lchannel=$1
+	ldie=$2
+
+	waas -s "${lchannel}:${ldie}" 2>/dev/null >> $LOG_FILE
+	cmd="procset|0,die,ASIC:${lchannel};DIE:${ldie};MODE:RECONFIGURE"
+	echo $cmd | $NC 2>/dev/null >> $LOG_FILE
+	echo >> $LOG_FILE
+
+	echo [$(date +"%F %T")] Die $lchannel-$ldie restarted >> $LOG_FILE
+}
 
 detect_dcdcs() {
 	lchannel=$1
@@ -125,14 +139,14 @@ while true; do
 						echo 0 > /var/run/die${channel}${q}
 						hardware_changed=1
 						echo [$(date +"%F %T")] Die $channel-$q came UP >> $LOG_FILE
-						cgminer_cmds="$cgminer_cmds knc-configure-die|ASIC:${channel};DIE:${q};MODE:ENABLE;"
+						cgminer_cmds="$cgminer_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:ENABLE"
 					fi
 				else
 					if [[ "x${detected}" != "x0" ]] ; then
 						echo 1000 > /var/run/die${channel}${q}
 						hardware_changed=1
 						echo [$(date +"%F %T")] Die $channel-$q came DOWN >> $LOG_FILE
-						cgminer_cmds="$cgminer_cmds knc-configure-die|ASIC:${channel};DIE:${q};MODE:DISABLE;"
+						cgminer_cmds="$cgminer_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:DISABLE"
 					fi
 				fi
 			done
@@ -146,6 +160,7 @@ while true; do
 					echo 1000 > /var/run/die${channel}${q}
 					hardware_changed=1
 					echo [$(date +"%F %T")] Die $channel-$q came DOWN '(ASIC not present)' >> $LOG_FILE
+					cgminer_cmds="$cgminer_cmds procset|0,die,ASIC:${channel};DIE:${q};MODE:DISABLE"
 				fi
 			done
 		fi
@@ -173,15 +188,15 @@ while true; do
 
 	restart_cgminer=
 	if [[ ${hardware_changed} ]] ; then
-		#for cmd in $cgminer_cmds ; do
-		#	echo $cmd | timeout -t 15 nc localhost 4028 2>/dev/null >> $LOG_FILE
-		#	if [[ $? -gt 100 ]] ; then
+		for cmd in $cgminer_cmds ; do
+			echo $cmd | $NC 2>/dev/null >> $LOG_FILE
+			if [[ $? -gt 100 ]] ; then
 				# Timeout; cgminer hangs, restart it
 				restart_cgminer=1
-		#		break
-		#	fi
-		#	echo >> $LOG_FILE
-		#done
+				break
+			fi
+			echo >> $LOG_FILE
+		done
 		if [[ ${restart_cgminer} ]] ; then
                        echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
                        /etc/init.d/bfgminer.sh restart
@@ -200,7 +215,6 @@ while true; do
 	fi
 	echo 0 > /var/run/tm
 
-	restart_cgminer=
 	for channel in 0 1 2 3 4 5; do
         	if [ "$BOARD_TYPE" = "bbone" ]; then
                         bus=$((channel+3))
@@ -258,29 +272,24 @@ while true; do
 		if [ "$failed0" = "1" ] ; then
 			# reset_die $channel 0
 			echo [$(date +"%F %T")] Die ${channel}-0 requires restart >> $LOG_FILE
-			restart_cgminer=1
+			reset_die $channel 0
 		fi
 		if [ "$failed1" = "1" ] ; then
 			# reset_die $channel 1
 			echo [$(date +"%F %T")] Die ${channel}-1 requires restart >> $LOG_FILE
-			restart_cgminer=1
+			reset_die $channel 1
 		fi
 		if [ "$failed2" = "1" ] ; then
 			# reset_die $channel 2
 			echo [$(date +"%F %T")] Die ${channel}-2 requires restart >> $LOG_FILE
-			restart_cgminer=1
+			reset_die $channel 2
 		fi
 		if [ "$failed3" = "1" ] ; then
 			# reset_die $channel 3
 			echo [$(date +"%F %T")] Die ${channel}-3 requires restart >> $LOG_FILE
-			restart_cgminer=1
+			reset_die $channel 3
 		fi
 	done
-
-	if [[ ${restart_cgminer} ]] ; then
-		echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
-		/etc/init.d/bfgminer.sh restart
-	fi
 
 	sleep 4
 done

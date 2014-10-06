@@ -28,8 +28,11 @@
  *	-r
  *		Read only. Do not read config file, do not change running values;
  *		waas will only print running config end exit
- *      -a      Auto-adjust PLL frequency based on the DC/DC temperatures.
- *              Works only for Ericsson devices.
+ *	-a
+ *		Auto-adjust PLL frequency based on the DC/DC temperatures.
+ *		Works only for Ericsson devices.
+ * 	-s asic:die
+ * 		apply settings to a single asic/die
  ***********************************************************************/
 
 #include <stdio.h>
@@ -316,7 +319,7 @@ static bool set_die_freq(int asic, int die, int freq)
 }
 
 /* Print out running operating values in JSON format */
-static int do_print_running_info(FILE *f, struct device_t *dev)
+static int do_print_running_info(FILE *f, struct device_t *dev, int start_asic, int end_asic, int start_die, int end_die)
 {
 	int asic, die, dcdc;
 	int i2c_bus;
@@ -327,14 +330,16 @@ static int do_print_running_info(FILE *f, struct device_t *dev)
 	int die_freq[KNC_MAX_DIES_PER_ASIC];
 
 	fprintf(f, "{\n");
-	for (asic = 0; asic < KNC_MAX_ASICS; ++asic)
+	for (asic = start_asic; asic <= end_asic; ++asic)
 	{
 		asic_board_t *board = &(dev->boards[asic]);
 		dcdc_mfrid_t board_mfrid = mfrid_from_board_type(board->type);
 		if (0 > (i2c_bus = i2c_connect(FIRST_ASIC_I2C_BUS + asic)))
 			continue;
 		fprintf(f, "\"asic_%d\": {\n", asic + 1);
-		for (dcdc = 0; dcdc < KNC_MAX_DCDC_DEVICES; ++dcdc) {
+		int start_dcdc = start_die * 2 + 0;
+		int end_dcdc = end_die * 2 + 1;
+		for (dcdc = start_dcdc; dcdc <= end_dcdc; ++dcdc) {
 			i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
 			dcdc_present = false;
 			if ((MFRID_GE == board_mfrid) || (MFRID_ERICSSON == board_mfrid)) {
@@ -379,10 +384,10 @@ static int do_print_running_info(FILE *f, struct device_t *dev)
 		i2c_disconnect(i2c_bus);
 		/* Read die frequencies and offsets */
 		if ((MFRID_GE == board_mfrid) || (MFRID_ERICSSON == board_mfrid)) {
-			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die)
+			for (die = start_die; die <= end_die; ++die)
 				die_freq[die] = read_die_freq(asic, die);
 			i2c_bus = i2c_connect(FIRST_ASIC_I2C_BUS + asic);
-			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
+			for (die = start_die; die <= end_die; ++die) {
 				int data = die_freq[die];
 				if ((data < dev->freq_start[asic]) || (data > dev->freq_end[asic]))
 					data = dev->freq_default[asic];
@@ -409,7 +414,7 @@ static int do_print_running_info(FILE *f, struct device_t *dev)
 			if (0 <= i2c_bus)
 				i2c_disconnect(i2c_bus);
 		} else {
-			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
+			for (die = start_die; die <= end_die; ++die) {
 				fprintf(f, "\t\"die%d_Freq\": \"\",\n", die);
 				fprintf(f, "\t\"die%d_Voffset\": \"\",\n", die);
 			}
@@ -419,7 +424,7 @@ static int do_print_running_info(FILE *f, struct device_t *dev)
 			fprintf(f, "\t\"temperature\": \"%.1f\"\n", temp);
 		else
 			fprintf(f, "\t\"temperature\": \"\"\n");
-		if(asic < (KNC_MAX_ASICS - 1))
+		if (asic < end_asic)
 			fprintf(f, "},\n");
 		else
 			fprintf(f, "}\n");
@@ -524,7 +529,7 @@ static int default_dcdc_vout_trim(asic_board_t *board)
 }
 
 static void read_running_settings(struct advanced_config * cfg,
-				  struct device_t *dev, bool use_defaults)
+				  struct device_t *dev, bool use_defaults, int start_asic, int end_asic, int start_die, int end_die)
 {
 	int i2c_bus;
 	int data;
@@ -532,12 +537,12 @@ static void read_running_settings(struct advanced_config * cfg,
 	dcdc_mfrid_t mfrids[KNC_MAX_DCDC_DEVICES];
 
 	/* Die voltage offsets */
-	for (asic = 0; asic < KNC_MAX_ASICS; ++asic)
+	for (asic = start_asic; asic <= end_asic; ++asic)
 	{
 		asic_board_t *board = &(dev->boards[asic]);
 		dcdc_mfrid_t board_mfrid = mfrid_from_board_type(board->type);
 		if (0 > (i2c_bus = i2c_connect(FIRST_ASIC_I2C_BUS + asic))) {
-			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
+			for (die = start_die; die <= end_die; ++die) {
 				cfg->dcdc_V_offset[asic][die] = 0x7FFF;
 			}
 			continue;
@@ -551,7 +556,7 @@ static void read_running_settings(struct advanced_config * cfg,
 					board->num_dcdc += 1;
 			}
 		}
-		for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
+		for (die = start_die; die <= end_die; ++die) {
 			if (0 == board->num_dcdc) {
 				cfg->dcdc_V_offset[asic][die] = 0x7FFF;
 				continue;
@@ -574,10 +579,10 @@ static void read_running_settings(struct advanced_config * cfg,
 	}
 
 	/* Die frequencies */
-	for (asic = 0; asic < KNC_MAX_ASICS; ++asic)
+	for (asic = start_asic; asic <= end_asic; ++asic)
 	{
 		asic_board_t *board = &(dev->boards[asic]);
-		for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
+		for (die = start_die; die <= end_die; ++die) {
 			int data = -1;
 			if (ASIC_BOARD_UNDEFINED != board->type) {
 				if (use_defaults) {
@@ -693,25 +698,17 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 /* die_freq - array of frequencies; if NULL - do not set frequency, only reset
  * only_this_die - set frequency and/or reset only this die. If < 0 then set/reset all dies
  */
-static bool asic_set_die_frequencies(asic_board_t *board, int *die_freq, int only_this_die)
+static bool asic_set_die_frequencies(asic_board_t *board, int *die_freq, int start_die, int end_die)
 {
 	int die;
-	int start_die, end_die;
 	bool success;
 
 	if (ASIC_BOARD_UNDEFINED == board->type) {
 		return false;
 	}
 
-	start_die = 0;
-	end_die = KNC_MAX_DIES_PER_ASIC;
-	if ((0 <= only_this_die) && (KNC_MAX_DIES_PER_ASIC > only_this_die)) {
-		start_die = only_this_die;
-		end_die = start_die + 1;
-	}
-
 	success = true;
-	for (die = start_die; die < end_die; ++die) {
+	for (die = start_die; die <= end_die; ++die) {
 		if (!set_die_freq(board->id, die, nearest_valid_asic_freq(board->type, die_freq[die])))
 			success = false;
 	}
@@ -719,7 +716,7 @@ static bool asic_set_die_frequencies(asic_board_t *board, int *die_freq, int onl
 }
 
 static bool implement_settings(struct advanced_config * cfg,
-			       struct device_t *dev)
+			       struct device_t *dev, int start_asic, int end_asic, int start_die, int end_die)
 {
 	int i2c_bus;
 	bool success = true;
@@ -727,7 +724,7 @@ static bool implement_settings(struct advanced_config * cfg,
 	int16_t data;
 
 	/* Die voltage offsets */
-	for (asic = 0; asic < KNC_MAX_ASICS; ++asic) {
+	for (asic = start_asic; asic <= end_asic; ++asic) {
 		asic_board_t *board = &(dev->boards[asic]);
 		if (ASIC_BOARD_UNDEFINED == board->type) {
 			continue;
@@ -736,6 +733,8 @@ static bool implement_settings(struct advanced_config * cfg,
 			continue;
 		}
 		dcdc_mfrid_t board_mfrid = mfrid_from_board_type(board->type);
+		int start_dcdc = start_die * 2 + 0;
+		int end_dcdc = end_die * 2 + 1;
 		int start = MIN_DCDC_VOUT_TRIM;
 		int end = MAX_DCDC_VOUT_TRIM;
 		if (MFRID_ERICSSON == board_mfrid) {
@@ -743,12 +742,12 @@ static bool implement_settings(struct advanced_config * cfg,
 			end *= DCDC_VOLTAGE_OFFSET_ERICSSON_MULTIPLIER;
 		}
 		if (MFRID_ERICSSON == board_mfrid) {
-			for (dcdc = 0; dcdc < KNC_MAX_DCDC_DEVICES; ++dcdc) {
+			for (dcdc = start_dcdc; dcdc <= end_dcdc; ++dcdc) {
 				i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
 				pmbus_off(i2c_bus, ERICSSON_SAFE_BIG_DELAY);
 			}
 		}
-		for (dcdc = 0; dcdc < KNC_MAX_DCDC_DEVICES; ++dcdc) {
+		for (dcdc = start_dcdc; dcdc <= end_dcdc; ++dcdc) {
 			die = dcdc / 2;
 			data = cfg->dcdc_V_offset[asic][die];
 			if (data < start)
@@ -766,7 +765,7 @@ static bool implement_settings(struct advanced_config * cfg,
 			}
 		}
 		if (MFRID_ERICSSON == board_mfrid) {
-			for (dcdc = 0; dcdc < KNC_MAX_DCDC_DEVICES; ++dcdc) {
+			for (dcdc = start_dcdc; dcdc <= end_dcdc; ++dcdc) {
 				i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
 				pmbus_on(i2c_bus, ERICSSON_SAFE_BIG_DELAY);
 			}
@@ -775,9 +774,9 @@ static bool implement_settings(struct advanced_config * cfg,
 	}
 
 	/* Die PLL frequency */
-	for (asic = 0; asic < KNC_MAX_ASICS; ++asic) {
+	for (asic = start_asic; asic <= end_asic; ++asic) {
 		asic_board_t *board = &(dev->boards[asic]);
-		asic_set_die_frequencies(board, cfg->die_freq[asic], -1);
+		asic_set_die_frequencies(board, cfg->die_freq[asic], start_die, end_die);
 	}
 
 	return success;
@@ -1004,7 +1003,7 @@ static int do_auto_PLL(struct device_t *dev,
 			for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
 				enable_all_cores(asic, false, 0, die); /* disable al cores */
 				sleep(10);  /* wait for current works to finish */
-				asic_set_die_frequencies(board, die_freq, die);
+				asic_set_die_frequencies(board, die_freq, die, die);
 				enable_all_cores(asic, true, 50000, die); /* enable al cores */
 			}
 			freq_changed = true;
@@ -1029,7 +1028,7 @@ static int do_auto_PLL(struct device_t *dev,
 #endif /* DEBUG_INFO */
 				reset_pair_of_ericsson_dcdcs(i2c_bus, DCDC_ADDR(dcdc1), DCDC_ADDR(dcdc2));
 				usleep(ERICSSON_SAFE_BIG_DELAY);
-				asic_set_die_frequencies(board, die_freq, die);
+				asic_set_die_frequencies(board, die_freq, die, die);
 				sleep(20);
 			}
 		}
@@ -1038,7 +1037,7 @@ static int do_auto_PLL(struct device_t *dev,
 
 	if (freq_changed) {
 		struct advanced_config running_settings;
-		read_running_settings(&running_settings, dev, false);
+		read_running_settings(&running_settings, dev, false, 0, KNC_MAX_ASICS - 1, 0, KNC_MAX_DIES_PER_ASIC - 1);
 		write_expected_performance(&running_settings, dev);
 		clock_gettime(CLOCK_MONOTONIC, &curtime);
 		prev_PLL_change = curtime.tv_sec;
@@ -1070,13 +1069,14 @@ int main(int argc, char *argv[])
 	int i, a;
 	struct device_t dev;
 	dcdc_mfrid_t dev_mfrid;
+	int single_asic = -1, single_die = -1;
 
 	strcpy(config_file_name, DEFAULT_CONFIG_FILE);
 
 	detect_device_type(&dev, true);
 	dev_mfrid = mfrid_from_board_type(dev.dev_type);
 
-	while (-1 != (opt = getopt(argc, argv, "c:i:o:g:drfa"))) {
+	while (-1 != (opt = getopt(argc, argv, "c:i:o:g:s:dra"))) {
 		switch (opt) {
 		case 'c':
 			strncpy(config_file_name, optarg,
@@ -1214,6 +1214,12 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Unknown running info requested: %s\n",
 				optarg);
 			return -6;
+		case 's':
+			if (2 != sscanf(optarg, "%d:%d", &single_asic, &single_die)) {
+				fprintf(stderr, "Wrong argument for \'s\' option: %s\n", optarg);
+				return -7;
+			}
+			break;
 		case 'd':
 			use_defaults = true;
 			break;
@@ -1224,6 +1230,24 @@ int main(int argc, char *argv[])
 			do_auto_pll_adj = true;
 			break;
 		}
+	}
+
+	int start_asic, end_asic, start_die, end_die;
+	if ((0 <= single_asic) && (KNC_MAX_ASICS > single_asic)) {
+		start_asic = single_asic;
+		end_asic = single_asic;
+		if ((0 <= single_die) && (KNC_MAX_DIES_PER_ASIC > single_die)) {
+			start_die = single_die;
+			end_die = single_die;
+		} else {
+			start_die = 0;
+			end_die = KNC_MAX_DIES_PER_ASIC - 1;
+		}
+	} else {
+		start_asic = 0;
+		end_asic = KNC_MAX_ASICS - 1;
+		start_die = 0;
+		end_die = KNC_MAX_DIES_PER_ASIC - 1;
 	}
 
 	if (do_auto_pll_adj) {
@@ -1259,16 +1283,16 @@ int main(int argc, char *argv[])
 			autopll_param_freq_step_up,
 			autopll_param_freq_step_down);
 		if (print_running_info)
-			ret = do_print_running_info(f, &dev);
+			ret = do_print_running_info(f, &dev, start_asic, end_asic, start_die, end_die);
 		return ret;
 	}
 
 	if (print_running_info) {
-		ret = do_print_running_info(f, &dev);
+		ret = do_print_running_info(f, &dev, start_asic, end_asic, start_die, end_die);
 		return ret;
 	}
 
-	read_running_settings(&running_settings, &dev, use_defaults);
+	read_running_settings(&running_settings, &dev, use_defaults, start_asic, end_asic, start_die, end_die);
 
 	if (!read_only) {
 		memcpy(&new_settings, &running_settings, sizeof(new_settings));
@@ -1277,20 +1301,20 @@ int main(int argc, char *argv[])
 			if (0 != parse_config_res)
 				return parse_config_res;
 		}
-		implement_settings(&new_settings, &dev);
-		read_running_settings(&running_settings, &dev, false);
+		implement_settings(&new_settings, &dev, start_asic, end_asic, start_die, end_die);
+		read_running_settings(&running_settings, &dev, false, start_asic, end_asic, start_die, end_die);
 	}
 
 	write_expected_performance(&running_settings, &dev);
 
 	/* Print out running settings in JSON format */
 	fprintf(f, "{\n");
-	for (asic = 0; asic < KNC_MAX_ASICS; ++asic)
+	for (asic = start_asic; asic <= end_asic; ++asic)
 	{
 		asic_board_t *board = &(dev.boards[asic]);
 		dcdc_mfrid_t board_mfrid = mfrid_from_board_type(board->type);
 		fprintf(f, "\"asic_%d_voltage\": {\n", asic + 1);
-		for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
+		for (die = start_die; die <= end_die; ++die) {
 			int16_t data =
 				running_settings.dcdc_V_offset[asic][die];
 			int start = MIN_DCDC_VOUT_TRIM;
@@ -1300,7 +1324,7 @@ int main(int argc, char *argv[])
 				end *= DCDC_VOLTAGE_OFFSET_ERICSSON_MULTIPLIER;
 			}
 			if ((data >= start) && (data <= end)) {
-				if (die < (KNC_MAX_DIES_PER_ASIC - 1)) {
+				if (die < end_die) {
 					fprintf(f, "\t\"die%d\": \"%1.4f\",\n",
 						die + 1,
 						dcdc_voltage_from_offset(board_mfrid, data));
@@ -1310,7 +1334,7 @@ int main(int argc, char *argv[])
 						dcdc_voltage_from_offset(board_mfrid, data));
 				}
 			} else {
-				if (die < (KNC_MAX_DIES_PER_ASIC - 1))
+				if (die < end_die)
 					fprintf(f, "\t\"die%d\": \"\",\n", die + 1);
 				else 
 					fprintf(f, "\t\"die%d\": \"\"\n", die + 1);
@@ -1318,10 +1342,10 @@ int main(int argc, char *argv[])
 		}
 		fprintf(f, "},\n");
 		fprintf(f, "\"asic_%d_frequency\": {\n", asic + 1);
-		for (die = 0; die < KNC_MAX_DIES_PER_ASIC; ++die) {
+		for (die = start_die; die <= end_die; ++die) {
 			int data = running_settings.die_freq[asic][die];
 			if ((data >= dev.freq_start[asic]) && (data <= dev.freq_end[asic])) {
-				if (die < (KNC_MAX_DIES_PER_ASIC - 1)) {
+				if (die < end_die) {
 					fprintf(f, "\t\"die%d\": \"%d\",\n",
 						die + 1, data);
 				} else {
@@ -1329,13 +1353,13 @@ int main(int argc, char *argv[])
 						die + 1, data);
 				}
 			} else {
-				if (die < (KNC_MAX_DIES_PER_ASIC - 1))
+				if (die < end_die)
 					fprintf(f, "\t\"die%d\": \"\",\n", die + 1);
 				else 
 					fprintf(f, "\t\"die%d\": \"\"\n", die + 1);
 			}
 		}
-		if (asic < (KNC_MAX_ASICS - 1))
+		if (asic < end_asic)
 			fprintf(f, "},\n");
 		else
 			fprintf(f, "}\n");
