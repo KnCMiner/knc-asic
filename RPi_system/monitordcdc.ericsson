@@ -32,8 +32,13 @@ reset_die() {
 
 	waas -s "${lchannel}:${ldie}" 2>/dev/null >> $LOG_FILE
 	cmd="procset|0,die,ASIC:${lchannel};DIE:${ldie};MODE:RECONFIGURE"
-	echo $cmd | $NC 2>/dev/null >> $LOG_FILE
-	echo >> $LOG_FILE
+	response=$(echo $cmd | $NC 2>/dev/null)
+	echo $response >> $LOG_FILE
+	if ! echo $response | grep 'STATUS=S' >/dev/null 2>&1 ; then
+		# Timeout or error while processing command (e.g. command not implemented)
+		# Restart miner in either case
+		restart_miner=1
+	fi
 
 	echo [$(date +"%F %T")] Die $lchannel-$ldie restarted >> $LOG_FILE
 }
@@ -216,6 +221,7 @@ while true; do
 	fi
 	echo 0 > /var/run/tm
 
+	restart_miner=
 	for channel in 0 1 2 3 4 5; do
 		if [ "$BOARD_TYPE" = "bbone" ]; then
 			bus=$((channel+3))
@@ -291,6 +297,11 @@ while true; do
 			reset_die $channel 3
 		fi
 	done
+
+	if [[ ${restart_miner} ]] ; then
+		echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
+		/etc/init.d/bfgminer.sh restart
+	fi
 
 	sleep 4
 done
