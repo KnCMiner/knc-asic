@@ -238,7 +238,7 @@ while true; do
 				continue
 			fi
 			echo 0 > /var/run/die${channel}${q}
-				if [ $cnt -le $THRESHOLD ] ; then
+				if [ $cnt -lt $THRESHOLD ] ; then
 				continue
 			fi
 			d=$((q*2))
