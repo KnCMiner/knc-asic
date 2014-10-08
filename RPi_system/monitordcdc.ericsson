@@ -189,13 +189,14 @@ while true; do
 	restart_miner=
 	if [[ ${hardware_changed} ]] ; then
 		for cmd in $miner_cmds ; do
-			echo $cmd | $NC 2>/dev/null >> $LOG_FILE
-			if [[ $? -gt 100 ]] ; then
-				# Timeout; miner hangs, restart it
+			response=$(echo $cmd | $NC 2>/dev/null)
+			echo $response >> $LOG_FILE
+			if ! echo $response | grep 'STATUS=S' >/dev/null 2>&1 ; then
+				# Timeout or error while processing command (e.g. command not implemented)
+				# Restart miner in either case
 				restart_miner=1
 				break
 			fi
-			echo >> $LOG_FILE
 		done
 		if [[ ${restart_miner} ]] ; then
 			echo [$(date +"%F %T")] Restarting bfgminer >> $LOG_FILE
