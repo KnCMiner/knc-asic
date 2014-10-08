@@ -900,8 +900,7 @@ bool knc_titan_setup_core_(void * const ctx, int channel, int die, int core, str
 	}
 	struct knc_report report;
 	knc_decode_report(response, &report, KNC_VERSION_TITAN);
-	params->nonce_bottom &= 0xFF000000;
-	if (report.progress != params->nonce_bottom) {
+	if (report.progress != (params->nonce_bottom & 0xFF000000)) {
 		applog(LOG_ERR, "KnC %d-%d: Failed to set nonce range (wanted 0x%02X, get 0x%02X)", channel, die, params->nonce_bottom >> 24, report.progress >> 24);
 		return false;
 	}
