@@ -109,6 +109,7 @@ bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, stru
 int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int request_length, const uint8_t *request, int response_length);
 int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, int response_length);
 int knc_syncronous_transfer(void *ctx, int channel, int request_length, const uint8_t *request, int response_length, uint8_t *response);
+void knc_syncronous_transfer_multi(void *ctx, int channel, int *request_lengths, int request_bufsize, const uint8_t *requests, int *response_lengths, int response_bufsize, uint8_t *responses, int *statuses, int num);
 
 /* Detect ASIC DIE version */
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);

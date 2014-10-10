@@ -18,6 +18,7 @@
 void *knc_trnsp_new(const char *devname);
 void knc_trnsp_free(void *opaque_ctx);
 int knc_trnsp_transfer(void *opaque_ctx, const uint8_t *txbuf, uint8_t *rxbuf, int len);
+int knc_trnsp_transfer_multi(void *opaque_ctx, uint8_t **txbuf, uint8_t **rxbuf, int *len, int num);
 bool knc_trnsp_asic_detect(void *opaque_ctx, int chip_id);
 void knc_trnsp_periodic_check(void *opaque_ctx);
 

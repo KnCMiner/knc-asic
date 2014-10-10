@@ -160,6 +160,36 @@ int knc_trnsp_transfer(void *opaque_ctx, const uint8_t *txbuf, uint8_t *rxbuf, i
 	return ret;
 }
 
+int knc_trnsp_transfer_multi(void *opaque_ctx, uint8_t **txbuf, uint8_t **rxbuf, int *len, int num)
+{
+	struct spidev_context *ctx = opaque_ctx;
+	struct spi_ioc_transfer *xfr;
+	int i, ret = 0;
+
+	if (NULL == (xfr = malloc(sizeof(struct spi_ioc_transfer) * num)))
+		return -1;
+
+	for (i = 0; i < num; ++i) {
+		memset(rxbuf[i], 0xff, len[i]);
+		ret += len[i];
+
+		xfr[i].tx_buf = (unsigned long)txbuf[i];
+		xfr[i].rx_buf = (unsigned long)rxbuf[i];
+		xfr[i].len = len[i];
+		xfr[i].speed_hz = ctx->speed;
+		xfr[i].delay_usecs = ctx->delay;
+		xfr[i].bits_per_word = ctx->bits;
+		xfr[i].cs_change = 0;
+		xfr[i].pad = 0;
+	}
+	applog(LOG_DEBUG, "KnC spi: multi-transfer with %d elements", num);
+	if (num > (ret = ioctl(ctx->fd, SPI_IOC_MESSAGE(num), xfr)))
+		applog(LOG_ERR, "KnC spi xfer: ioctl error (ret = %d) on SPI device: %m", ret);
+
+	free(xfr);
+	return ret;
+}
+
 bool knc_trnsp_asic_detect(UNUSED void *opaque_ctx, UNUSED int chip_id)
 {
 	return true;

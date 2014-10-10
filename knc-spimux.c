@@ -252,3 +252,61 @@ int knc_syncronous_transfer(void *ctx, int channel, int request_length, const ui
     return ret;
 }
 
+void knc_syncronous_transfer_multi(void *ctx, int channel, int *request_lengths, int request_bufsize, const uint8_t *requests, int *response_lengths, int response_bufsize, uint8_t *responses, int *statuses, int num)
+{
+	if (0 >= num)
+		return;
+	int i;
+	int len = knc_transfer_length(request_bufsize, response_bufsize);
+	uint8_t *txbuf = calloc(1, num * len);
+	uint8_t *rxbuf = malloc(num * len);
+	uint8_t **txbuf_ptrs = malloc(num * sizeof(uint8_t*));
+	uint8_t **rxbuf_ptrs = malloc(num * sizeof(uint8_t*));
+	int *lengths = malloc(num * sizeof(int));
+
+	if ((NULL == lengths) || (NULL == rxbuf_ptrs) || (NULL == txbuf_ptrs) || (NULL == rxbuf) || (NULL == txbuf))
+		goto exit;
+
+	int cur_chunk_base = 0;
+	int cur_chunk_num = 0;
+	int cur_chunk_len = 0;
+	for (i = 0; i < num; ++i) {
+		lengths[i] = knc_transfer_length(request_lengths[i], response_lengths[i]);
+		if (MAX_BYTES_IN_SPI_XSFER <= (cur_chunk_len + lengths[i])) {
+			/* Time to send chunk */
+			knc_trnsp_transfer_multi(ctx, &txbuf_ptrs[cur_chunk_base], &rxbuf_ptrs[cur_chunk_base], &lengths[cur_chunk_base], cur_chunk_num);
+			cur_chunk_base += cur_chunk_num;
+			cur_chunk_num = 0;
+			cur_chunk_len = 0;
+		}
+		knc_prepare_transfer(txbuf, i * len, num * len, channel, request_lengths[i], &requests[i * request_bufsize], response_lengths[i]);
+		txbuf_ptrs[i] = &txbuf[i * len];
+		rxbuf_ptrs[i] = &rxbuf[i * len];
+
+		++cur_chunk_num;
+		cur_chunk_len += lengths[i];
+	}
+	/* Send last chunk */
+	knc_trnsp_transfer_multi(ctx, &txbuf_ptrs[cur_chunk_base], &rxbuf_ptrs[cur_chunk_base], &lengths[cur_chunk_base], cur_chunk_num);
+
+	for (i = 0; i < num; ++i) {
+		uint8_t *response_buf;
+		int ret = knc_decode_response(rxbuf_ptrs[i], request_lengths[i], &response_buf, response_lengths[i]);
+		memcpy(&responses[i * response_bufsize], response_buf, response_lengths[i]);
+		if (ret && memcmp(&(rxbuf_ptrs[i][lengths[i] - 4]), "\377\377\377\377", 4) == 0)
+			ret = KNC_ERR_UNAVAIL;
+		statuses[i] = ret;
+	}
+
+exit:
+	if (NULL != lengths)
+		free(lengths);
+	if (NULL != rxbuf_ptrs)
+		free(rxbuf_ptrs);
+	if (NULL != txbuf_ptrs)
+		free(txbuf_ptrs);
+	if (NULL != rxbuf)
+		free(rxbuf);
+	if (NULL != txbuf)
+		free(txbuf);
+}
