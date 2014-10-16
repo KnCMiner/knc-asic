@@ -669,7 +669,7 @@ bool fill_in_thread_params(int num_threads, struct titan_setup_core_params *para
 	return true;
 }
 
-bool knc_titan_setup_core_(void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params)
+bool knc_titan_setup_core_(int log_level, void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params)
 {
 #define	SETWORK_CMD_SIZE	(5 + BLOCK_HEADER_BYTES_WITHOUT_NONCE)
 	/* The size of command is the same as for set_work */
@@ -895,13 +895,13 @@ bool knc_titan_setup_core_(void * const ctx, int channel, int die, int core, str
 	int request_length = knc_prepare_report(request, die, core);
 	status = knc_syncronous_transfer(ctx, channel, request_length, request, response_length, response);
 	if (status) {
-		applog(LOG_ERR, "KnC %d-%d: Failed (%x)", channel, die, status);
+		applog(log_level, "KnC %d-%d: Failed (%x)", channel, die, status);
 		return false;
 	}
 	struct knc_report report;
 	knc_decode_report(response, &report, KNC_VERSION_TITAN);
 	if (report.progress != (params->nonce_bottom & 0xFF000000)) {
-		applog(LOG_ERR, "KnC %d-%d: Failed to set nonce range (wanted 0x%02X, get 0x%02X)", channel, die, params->nonce_bottom >> 24, report.progress >> 24);
+		applog(log_level, "KnC %d-%d: Failed to set nonce range (wanted 0x%02X, get 0x%02X)", channel, die, params->nonce_bottom >> 24, report.progress >> 24);
 		return false;
 	}
 
@@ -919,7 +919,7 @@ bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, stru
 		tmp.nonce_bottom = 0x00000000;
 		tmp.nonce_top = 0x00FFFFFFFF;
 	}
-	if (!knc_titan_setup_core_(ctx, channel, die, core, &tmp))
+	if (!knc_titan_setup_core_(LOG_ERR, ctx, channel, die, core, &tmp))
 		return false;
-	return knc_titan_setup_core_(ctx, channel, die, core, params);
+	return knc_titan_setup_core_(LOG_ERR, ctx, channel, die, core, params);
 }

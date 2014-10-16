@@ -97,6 +97,7 @@ void knc_prepare_neptune_titan_message(int request_length, const uint8_t *reques
 
 bool fill_in_thread_params(int num_threads, struct titan_setup_core_params *params);
 bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params);
+bool knc_titan_setup_core_(int log_level, void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params);
 
 #define KNC_ACCEPTED    (1<<0)
 #define KNC_ERR_CRC     (1<<1)
