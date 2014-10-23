@@ -682,10 +682,13 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 					cfg->dcdc_V_offset[asic_v][die] = default_dcdc_vout_trim(&dev->boards[asic_v]);
 			} else if (asic_f >= 0) {
 				int asic_fr = -1;
-				sscanf(&chunk.memory[tokens[i].start],
-				       "%d", &asic_fr);
-				if (asic_fr >= 0)
+				if (1 == sscanf(&chunk.memory[tokens[i].start],
+								"%d", &asic_fr)) {
 					cfg->die_freq[asic_f][die] = nearest_valid_asic_freq(dev->boards[asic_f].type, asic_fr);
+				}
+				if (0 >= asic_fr) {
+					cfg->die_freq[asic_f][die] = 0;
+				}
 			}
 		}
 	}
@@ -709,7 +712,8 @@ static bool asic_set_die_frequencies(asic_board_t *board, int *die_freq, int sta
 
 	success = true;
 	for (die = start_die; die <= end_die; ++die) {
-		if (!set_die_freq(board->id, die, nearest_valid_asic_freq(board->type, die_freq[die])))
+		int freq = (0 >= die_freq[die]) ? 0 : nearest_valid_asic_freq(board->type, die_freq[die]);
+		if (!set_die_freq(board->id, die, freq))
 			success = false;
 	}
 	return success;
@@ -766,8 +770,11 @@ static bool implement_settings(struct advanced_config * cfg,
 		}
 		if (MFRID_ERICSSON == board_mfrid) {
 			for (dcdc = start_dcdc; dcdc <= end_dcdc; ++dcdc) {
-				i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
-				pmbus_on(i2c_bus, ERICSSON_SAFE_BIG_DELAY);
+				die = dcdc / 2;
+				if (0 < cfg->die_freq[asic][die]) {
+					i2c_set_slave_device_addr(i2c_bus, DCDC_ADDR(dcdc));
+					pmbus_on(i2c_bus, ERICSSON_SAFE_BIG_DELAY);
+				}
 			}
 		}
 		i2c_disconnect(i2c_bus);
@@ -1137,6 +1144,7 @@ int main(int argc, char *argv[])
 				default:
 					break;
 				}
+				printf("OFF\n");
 				for (freq = start; freq <= end; freq += step) {
 					printf("%d\n", freq);
 				}
@@ -1193,6 +1201,7 @@ int main(int argc, char *argv[])
 					end = 0;
 					break;
 				}
+				printf("\"OFF\",\n");
 				for (freq = start; freq <= end; freq += step) {
 					if (freq < end)
 						printf("\"%d\",\n", freq);
