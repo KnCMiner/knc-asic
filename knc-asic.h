@@ -6,6 +6,11 @@
 #define	BLOCK_HEADER_BYTES			80
 #define	BLOCK_HEADER_BYTES_WITHOUT_NONCE	(BLOCK_HEADER_BYTES - 4)
 
+/* FPGA Command codes */
+#define KNC_FPGA_CMD_SETUP               0x01
+#define KNC_FPGA_CMD_WORK_REQUEST        0x02
+#define KNC_FPGA_CMD_WORK_STATUS         0x03
+
 /* ASIC Command codes */
 #define	KNC_ASIC_CMD_GETINFO             0x80
 #define KNC_ASIC_CMD_SETWORK             0x81
@@ -87,11 +92,15 @@ int knc_prepare_jupiter_setwork(uint8_t *request, int die, int core, int slot, s
 int knc_prepare_jupiter_halt(uint8_t *request, int die, int core);
 int knc_prepare_neptune_halt(uint8_t *request, int die, int core);
 int knc_prepare_titan_halt(uint8_t *request, int die, int core);
+int knc_prepare_titan_setup(uint8_t *request, int asic, int divider, int preclk, int declk, int sslowmin);
+int knc_prepare_titan_work_request(uint8_t *request, int asic, int die, int slot, int core_range_start, int core_range_stop, int resend, struct work *work);
+int knc_prepare_titan_work_status(uint8_t *request, int asic);
 
 int knc_check_response(uint8_t *response, int response_length, uint8_t ack);
 
 int knc_decode_info(uint8_t *response, struct knc_die_info *die_info);
 int knc_decode_report(uint8_t *response, struct knc_report *report, int version);
+int knc_decode_work_status(uint8_t *response, uint8_t *num_request_busy);
 
 void knc_prepare_neptune_titan_message(int request_length, const uint8_t *request, uint8_t *buffer);
 
@@ -111,6 +120,7 @@ int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int 
 int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, int response_length);
 int knc_syncronous_transfer(void *ctx, int channel, int request_length, const uint8_t *request, int response_length, uint8_t *response);
 void knc_syncronous_transfer_multi(void *ctx, int channel, int *request_lengths, int request_bufsize, const uint8_t *requests, int *response_lengths, int response_bufsize, uint8_t *responses, int *statuses, int num);
+int knc_syncronous_transfer_fpga(void *ctx, int request_length, const uint8_t *request, int response_length, uint8_t *response);
 
 /* Detect ASIC DIE version */
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);

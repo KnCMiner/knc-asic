@@ -362,6 +362,43 @@ int knc_prepare_titan_halt(uint8_t *request, int die, int core)
 	return 4 + 1 + BLOCK_HEADER_BYTES_WITHOUT_NONCE;
 }
 
+int knc_prepare_titan_setup(uint8_t *request, int asic, int divider, int preclk, int declk, int sslowmin)
+{
+	request[0] = (KNC_FPGA_CMD_SETUP >> 4);
+	request[1] = ((KNC_FPGA_CMD_SETUP & 0xF) << 4) | asic;
+	request[2] = divider >> 8;
+	request[3] = divider & 0xFF;
+	request[4] = preclk;
+	request[5] = declk;
+	request[6] = sslowmin;
+	return 7;
+}
+
+int knc_prepare_titan_work_request(uint8_t *request, int asic, int die, int slot, int core_range_start, int core_range_stop, int resend, struct work *work)
+{
+	request[0] = (KNC_FPGA_CMD_WORK_REQUEST >> 4);
+	request[1] = ((KNC_FPGA_CMD_WORK_REQUEST & 0xF) << 4) | asic;
+	request[2] = (die << 4) | slot;
+	request[3] = core_range_start >> 8;
+	request[4] = core_range_start & 0xFF;
+	request[5] = core_range_stop >> 8;
+	request[6] = core_range_stop & 0xFF;
+	request[7] = resend;
+	if (work)
+		knc_prepare_titan_work(request + 8, work);
+	else
+		memset(request + 8, 0, BLOCK_HEADER_BYTES_WITHOUT_NONCE);
+	request[8 + BLOCK_HEADER_BYTES_WITHOUT_NONCE] = 0;
+	return 9 + BLOCK_HEADER_BYTES_WITHOUT_NONCE;
+}
+
+int knc_prepare_titan_work_status(uint8_t *request, int asic)
+{
+	request[0] = (KNC_FPGA_CMD_WORK_STATUS >> 4);
+	request[1] = ((KNC_FPGA_CMD_WORK_STATUS & 0xF) << 4) | asic;
+	return 2;
+}
+
 
 /* crc32.c -- compute the CRC-32 of a data stream, stolen from zlib
  */
@@ -554,6 +591,14 @@ int knc_decode_report(uint8_t *response, struct knc_report *report, int version)
 		report->nonce[n].slot = -1;
 		report->nonce[n].nonce = 0;
 	}
+	return 0;
+}
+
+int knc_decode_work_status(uint8_t *response, uint8_t *num_request_busy)
+{
+	if (response[0] != 0xFF)
+		return -1;
+	*num_request_busy = response[1];
 	return 0;
 }
 
