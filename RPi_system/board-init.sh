@@ -67,13 +67,13 @@ if [ "$?" = "0" ]; then
   echo low > /sys/class/gpio/gpio22/direction
 fi
 
-knc-led 0 1 0
-
 # Run waas
 if [ -f /config/advanced.conf ]; then
 	waas
 else
 	waas -d -o /config/advanced.conf
 fi
+
+knc-led 0 1 0
 
 lcd-message --init
