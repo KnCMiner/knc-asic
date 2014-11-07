@@ -58,6 +58,7 @@ struct knc_die_info {
 };
 
 #define KNC_NONCES_PER_REPORT 5
+#define KNC_STATUS_BYTE_ERROR_COUNTERS 4
 
 struct knc_report {
 	int next_state;
@@ -100,7 +101,7 @@ int knc_check_response(uint8_t *response, int response_length, uint8_t ack);
 
 int knc_decode_info(uint8_t *response, struct knc_die_info *die_info);
 int knc_decode_report(uint8_t *response, struct knc_report *report, int version);
-int knc_decode_work_status(uint8_t *response, uint8_t *num_request_busy);
+int knc_decode_work_status(uint8_t *response, uint8_t *num_request_busy, uint16_t *num_status_byte_error);
 
 void knc_prepare_neptune_titan_message(int request_length, const uint8_t *request, uint8_t *buffer);
 

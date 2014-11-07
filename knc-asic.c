@@ -594,11 +594,13 @@ int knc_decode_report(uint8_t *response, struct knc_report *report, int version)
 	return 0;
 }
 
-int knc_decode_work_status(uint8_t *response, uint8_t *num_request_busy)
+int knc_decode_work_status(uint8_t *response, uint8_t *num_request_busy, uint16_t *num_status_byte_error)
 {
 	if (response[0] != 0xFF)
 		return -1;
 	*num_request_busy = response[1];
+	for (int i = 0 ; i < KNC_STATUS_BYTE_ERROR_COUNTERS ; i++)
+		num_status_byte_error[i] = 256 * response[2 + 2*i] + response[2 + 2*i + 1];
 	return 0;
 }
 
