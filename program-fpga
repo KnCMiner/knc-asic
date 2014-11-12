@@ -9,7 +9,7 @@ CONFIG_DONE="/sys/class/gpio/gpio66/value"
 nSTATUS="/sys/class/gpio/gpio69/value"
 SPI="/dev/spidev1.0"
 CODE="${1:-spimux.rbf}"
-MUX=1-0070
+MUX=2-0070
 elif [ -f /sys/class/gpio/gpio21/value ]; then
 # raspberry pi
 nCONFIG="/sys/class/gpio/gpio13/value"

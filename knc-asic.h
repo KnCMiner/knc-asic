@@ -158,7 +158,7 @@ int knc_prepare_reset(uint8_t *txbuf, int offset, int size);
 #endif
 
 #ifdef CONTROLLER_BOARD_BBB
-#define FIRST_ASIC_I2C_BUS	1
+#define FIRST_ASIC_I2C_BUS	3
 #endif
 
 #ifndef FIRST_ASIC_I2C_BUS
