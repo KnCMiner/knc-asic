@@ -18,12 +18,15 @@
 
 static int opt_verbose = 0;
 static int opt_bitbang = 0;
+static int opt_attempts = 3;
 
 static void print_usage(const char *prog)
 {
 	printf("Usage: %s [-v] [command,..]\n", prog);
 	puts("  -v --verbose  Verbose operation\n"
 	     "  -b --bitbang  Use bitbang GPIO for I2C\n"
+	     "  -a --attempts Use so many initializing attempts.\n"
+	     "                  (< 0) => infinity. Default is 3.\n"
 	     "  init          Initialize I/O power\n"
 	);
 	exit(1);
@@ -35,11 +38,12 @@ static void parse_opts(int argc, char *argv[])
 		static const struct option lopts[] = {
 			{ "bitbang",  0, 0, 'b' },
 			{ "verbose",  0, 0, 'v' },
+			{ "attempts",  1, 0, 'a' },
 			{ NULL, 0, 0, 0 },
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "vb", lopts, NULL);
+		c = getopt_long(argc, argv, "vba:", lopts, NULL);
 
 		if (c == -1)
 			break;
@@ -50,6 +54,13 @@ static void parse_opts(int argc, char *argv[])
 			break;
 		case 'b':
 			opt_bitbang = 1;
+			break;
+		case 'a':
+			opt_attempts = atoi(optarg);
+			if (0 != opt_attempts)
+				break;
+			printf("Invalid number of attempts: %s\n", optarg);
+			print_usage(argv[0]);
 			break;
 		default:
 			print_usage(argv[0]);
@@ -73,16 +84,20 @@ static int io_pwr_init(void)
 		return 1;
 	}
 
-	/* Try to configure DC(/DC for three times */
-	if (opt_verbose) fprintf(stderr, "Configuring TPS65217\n");
-	if(!configure_tps65217(i2c_bus)) {
-	if (opt_verbose) fprintf(stderr, "Configuring TPS65217 try 2\n");
-	if(!configure_tps65217(i2c_bus)) {
-	if (opt_verbose) fprintf(stderr, "Configuring TPS65217 try 3\n");
-	if(!configure_tps65217(i2c_bus)) {
+	/* Try to configure DC/DC several times */
+	int try;
+	bool success = false;
+	for (try = 1; (try <= opt_attempts) || (opt_attempts < 0); ++try) {
+		if (opt_verbose) fprintf(stderr, "Configuring TPS65217 try %d\n", try);
+		if (configure_tps65217(i2c_bus)) {
+			success = true;
+			break;
+		}
+	}
+	if (!success) {
 		fprintf(stderr, "DC/DC converter configuration failed!\n");
 		return 1;
-	} } }
+	}
 
 	if (0 <= i2c_bus)
 		i2c_disconnect(i2c_bus);
