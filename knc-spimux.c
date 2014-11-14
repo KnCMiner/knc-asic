@@ -59,6 +59,20 @@
  *   16'h0002
  * Reset the SPI MUX controller
  *
+ * Titan Specific Commands
+ *
+ * Setup SPI
+ *   12'h1 4'asic 16'divider 8'preclk 8'declk 8'sslowmin
+ * Set up FPGA to ASIC SPI communication parameters
+ *
+ * Work Request
+ *   12'h2 4'asic 4'die 4'slot 16'core_start 16'core_stop 8'resend 608'work 8'dont_care
+ * Order FPGA to send work to many cores
+ *
+ * Work Status
+ *   12'h3 4'asic -> 8'hFF 8'num_request_busy 8'num_status_byte_error
+ * Get status on work requests currently being sent by FPGA
+ *
  */
 
 int knc_transfer_length(int request_length, int response_length)
