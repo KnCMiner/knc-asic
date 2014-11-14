@@ -67,12 +67,6 @@ int knc_transfer_length(int request_length, int response_length)
 	return 2 + MAX(request_length, 4 + response_length ) + 4 + 1 + 3;
 }
 
-int knc_transfer_length_fpga(int request_length, int response_length)
-{
-	/* request header, request body/response */
-	return MAX(request_length, 4 + response_length );
-}
-
 int knc_prepare_transfer(uint8_t *txbuf, int offset, int size, int channel, int request_length, const uint8_t *request, int response_length)
 {
 	/* FPGA control, request header, request body/response, CRC(4), ACK(1), EXTRA(3) */
@@ -319,12 +313,13 @@ exit:
 
 int knc_syncronous_transfer_fpga(void *ctx, int request_length, const uint8_t *request, int response_length, uint8_t *response)
 {
-    int len = knc_transfer_length_fpga(request_length, response_length);
+    int len = request_length + response_length;
     uint8_t rxbuf[len];
 
     knc_trnsp_transfer(ctx, request, rxbuf, len);
 
-    memcpy(response, rxbuf, response_length);
+    if (response)
+        memcpy(response, rxbuf + request_length, response_length);
 
     return 0;
 }
