@@ -50,7 +50,7 @@
  * Channel status
  *   4'd3, 4'channel, 8'x -> 32'revision, 8'board_type, 8'board_revision, 48'reserved, 1440'core_available (360' per die)
  * request information about a channel
- * 
+ *
  * Communication test
  *   16'h0001 16'x
  * Simple test of SPI communication
@@ -100,7 +100,6 @@ int knc_prepare_led(uint8_t *txbuf, int offset, int size, int red, int green, in
 	txbuf[1] = green << 4 | blue;
 
 	return offset + len;
-	
 }
 
 /* reset controller */
@@ -220,36 +219,36 @@ int knc_decode_freq(uint8_t *response)
 /* request_length = 0 disables communication checks, i.e. Jupiter protocol */
 int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, int response_length)
 {
-    if (response) {
-	if (response_length > 0) {
-	    *response = rxbuf + 2 + 4;
-	} else {
-	    *response = NULL;
+	if (response) {
+		if (response_length > 0) {
+			*response = rxbuf + 2 + 4;
+		} else {
+			*response = NULL;
+		}
 	}
-    }
-      
-    if (request_length == 0)
-	return 0;
 
-    return knc_check_response(rxbuf + 2 + 4, response_length, rxbuf[2+4+MAX(request_length-4, response_length)+4]);
+	if (request_length == 0)
+		return 0;
+
+	return knc_check_response(rxbuf + 2 + 4, response_length, rxbuf[2+4+MAX(request_length-4, response_length)+4]);
 }
 
 int knc_syncronous_transfer(void *ctx, int channel, int request_length, const uint8_t *request, int response_length, uint8_t *response)
 {
-    int len = knc_transfer_length(request_length, response_length);
-    uint8_t txbuf[len];
-    uint8_t rxbuf[len];
-    memset(txbuf, 0, len);
-    knc_prepare_transfer(txbuf, 0, len, channel, request_length, request, response_length);
-    knc_trnsp_transfer(ctx, txbuf, rxbuf, len);
+	int len = knc_transfer_length(request_length, response_length);
+	uint8_t txbuf[len];
+	uint8_t rxbuf[len];
+	memset(txbuf, 0, len);
+	knc_prepare_transfer(txbuf, 0, len, channel, request_length, request, response_length);
+	knc_trnsp_transfer(ctx, txbuf, rxbuf, len);
 
-    uint8_t *response_buf;
-    int ret = knc_decode_response(rxbuf, request_length, &response_buf, response_length);
-    if (response)
-	memcpy(response, response_buf, response_length);
-    if (ret && memcmp(&rxbuf[len-4], "\377\377\377\377", 4) == 0)
-	ret = KNC_ERR_UNAVAIL;
-    return ret;
+	uint8_t *response_buf;
+	int ret = knc_decode_response(rxbuf, request_length, &response_buf, response_length);
+	if (response)
+		memcpy(response, response_buf, response_length);
+	if (ret && memcmp(&rxbuf[len-4], "\377\377\377\377", 4) == 0)
+		ret = KNC_ERR_UNAVAIL;
+	return ret;
 }
 
 void knc_syncronous_transfer_multi(void *ctx, int channel, int *request_lengths, int request_bufsize, const uint8_t *requests, int *response_lengths, int response_bufsize, uint8_t *responses, int *statuses, int num)
@@ -313,13 +312,13 @@ exit:
 
 int knc_syncronous_transfer_fpga(void *ctx, int request_length, const uint8_t *request, int response_length, uint8_t *response)
 {
-    int len = request_length + response_length;
-    uint8_t rxbuf[len];
+	int len = request_length + response_length;
+	uint8_t rxbuf[len];
 
-    knc_trnsp_transfer(ctx, request, rxbuf, len);
+	knc_trnsp_transfer(ctx, request, rxbuf, len);
 
-    if (response)
-        memcpy(response, rxbuf + request_length, response_length);
+	if (response)
+		memcpy(response, rxbuf + request_length, response_length);
 
-    return 0;
+	return 0;
 }

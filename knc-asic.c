@@ -478,31 +478,31 @@ static uint32_t crc32(const unsigned char *buf, unsigned len)
 
 void knc_prepare_neptune_titan_message(int request_length, const uint8_t *request, uint8_t *buffer)
 {
-    uint32_t crc;
-    memcpy(buffer, request, request_length);
-    buffer += request_length;
-    crc = crc32(request, request_length);
-    PUT_ULONG_BE(crc, buffer, 0);
+	uint32_t crc;
+	memcpy(buffer, request, request_length);
+	buffer += request_length;
+	crc = crc32(request, request_length);
+	PUT_ULONG_BE(crc, buffer, 0);
 }
 
 int knc_check_response(uint8_t *response, int response_length, uint8_t ack)
 {
-    int ret = 0;
-    if (response_length > 0) {
-	uint32_t crc, recv_crc;
-	crc = crc32(response, response_length);
-	recv_crc = GET_ULONG_BE(response, response_length);
-	if (crc != recv_crc)
-	    ret |= KNC_ERR_CRC;
-    }
+	int ret = 0;
+	if (response_length > 0) {
+		uint32_t crc, recv_crc;
+		crc = crc32(response, response_length);
+		recv_crc = GET_ULONG_BE(response, response_length);
+		if (crc != recv_crc)
+			ret |= KNC_ERR_CRC;
+	}
 
-    if ((ack & KNC_ASIC_ACK_MASK) != KNC_ASIC_ACK_MATCH)
-        ret |= KNC_ERR_ACK;
-    if ((ack & KNC_ASIC_ACK_CRC))
-        ret |= KNC_ERR_CRCACK;
-    if ((ack & KNC_ASIC_ACK_ACCEPT))
-        ret |= KNC_ACCEPTED;
-    return ret;
+	if ((ack & KNC_ASIC_ACK_MASK) != KNC_ASIC_ACK_MATCH)
+		ret |= KNC_ERR_ACK;
+	if ((ack & KNC_ASIC_ACK_CRC))
+		ret |= KNC_ERR_CRCACK;
+	if ((ack & KNC_ASIC_ACK_ACCEPT))
+		ret |= KNC_ACCEPTED;
+	return ret;
 }
 
 int knc_decode_info(uint8_t *response, struct knc_die_info *die_info)
