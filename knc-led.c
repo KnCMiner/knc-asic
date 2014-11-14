@@ -30,7 +30,7 @@ int main(int argc, char **argv)
 		exit(1);
 	}
 
-	uint8_t request[2], response[2];
+	uint8_t request[2];
 	uint32_t red = strtoul(*args++, NULL, 0);
 	uint32_t green = strtoul(*args++, NULL, 0);
 	uint32_t blue = strtoul(*args++, NULL, 0);
@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "ERROR: Failed to open transport device\n");
 		exit(1);
 	}
-	knc_trnsp_transfer(ctx, request, response, len);
+	knc_syncronous_transfer_fpga(ctx, len, request, 0, NULL);
 
 	knc_trnsp_free(ctx);
 	
