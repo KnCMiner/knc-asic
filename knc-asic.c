@@ -632,12 +632,12 @@ int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_inf
 	int cores_in_die = response[0]<<8 | response[1];
 	int version = response[2]<<8 | response[3];
 	if (status != 0) {
-		if (version == KNC_ASIC_VERSION_NEPTUNE) {
+		if (version == KNC_ASIC_VERSION_NEPTUNE && cores_in_die <= KNC_CORES_PER_DIE_NEPTUNE) {
 			applog(LOG_DEBUG, "KnC %d-%d: Looks like a NEPTUNE die with %d cores", channel, die, cores_in_die);
 			/* Try again with right response size */
 			response_len = 2 + 2 + 4 + 4 + (cores_in_die*2 + 7) / 8;
 			status = knc_syncronous_transfer(ctx, channel, request_len, request, response_len, response);
-		} else if (version == KNC_ASIC_VERSION_TITAN) {
+		} else if (version == KNC_ASIC_VERSION_TITAN && cores_in_die <= KNC_CORES_PER_DIE_TITAN) {
 			applog(LOG_DEBUG, "KnC %d-%d: Looks like a TITAN die with %d cores", channel, die, cores_in_die);
 			/* Try again with right response size */
 			response_len = 2 + 2 + 4 + 4 + (cores_in_die*2 + 7) / 8;

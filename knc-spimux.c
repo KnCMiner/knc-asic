@@ -250,6 +250,8 @@ int knc_decode_response(uint8_t *rxbuf, int request_length, uint8_t **response, 
 int knc_syncronous_transfer(void *ctx, int channel, int request_length, const uint8_t *request, int response_length, uint8_t *response)
 {
 	int len = knc_transfer_length(request_length, response_length);
+	if (MAX_BYTES_IN_SPI_XSFER < len)
+		return -1;
 	uint8_t txbuf[len];
 	uint8_t rxbuf[len];
 	memset(txbuf, 0, len);
