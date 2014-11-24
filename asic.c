@@ -169,7 +169,7 @@ static void do_setwork(void *ctx, int channel, int die, UNUSED int argc, char **
 			}
 			if (!(status & KNC_ERR_MASK)) {
 				/* !KNC_ERRMASK */
-				applog(LOG_ERR, "KnC %d-%d: Core busy", channel, die, status);
+				applog(LOG_ERR, "KnC %d-%d: Core busy", channel, die);
 			}
 		}
 		handle_report(response);
