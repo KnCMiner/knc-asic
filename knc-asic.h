@@ -6,6 +6,9 @@
 #define	BLOCK_HEADER_BYTES			80
 #define	BLOCK_HEADER_BYTES_WITHOUT_NONCE	(BLOCK_HEADER_BYTES - 4)
 
+#define	KNC_MIN_SCRYPT_NFACTOR	10
+#define	KNC_MAX_SCRYPT_NFACTOR	20
+
 /* FPGA Command codes */
 #define KNC_FPGA_CMD_SETUP               0x01
 #define KNC_FPGA_CMD_WORK_REQUEST        0x02
@@ -105,7 +108,7 @@ int knc_decode_work_status(uint8_t *response, uint8_t *num_request_busy, uint16_
 
 void knc_prepare_neptune_titan_message(int request_length, const uint8_t *request, uint8_t *buffer);
 
-bool fill_in_thread_params(int num_threads, struct titan_setup_core_params *params);
+bool fill_in_thread_Nfactor_params(int num_threads, uint32_t Nfactor, struct titan_setup_core_params *params);
 bool knc_titan_setup_core(void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params);
 bool knc_titan_setup_core_(int log_level, void * const ctx, int channel, int die, int core, struct titan_setup_core_params *params);
 

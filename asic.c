@@ -228,10 +228,11 @@ static void do_titan_setup(void *ctx, int channel, int die, UNUSED int argc, cha
 
 	int core = strtoul(*args++, NULL, 0);
 	int num_threads = strtoul(*args++, NULL, 0);
+	int Nfactor = strtoul(*args++, NULL, 0);
 	setup_params.nonce_bottom = strtoul(*args++, NULL, 0);
 	setup_params.nonce_top = strtoul(*args++, NULL, 0);
 
-	if (!fill_in_thread_params(num_threads, &setup_params))
+	if (!fill_in_thread_Nfactor_params(num_threads, Nfactor, &setup_params))
 		return;
 
 	detect_chip(ctx, channel, die);
@@ -405,7 +406,7 @@ struct knc_asic_command {
 	{"report", "core", "Get nonce report", 1, do_report},
 	{"halt", "core", "Halt core", 1, do_halt},
 	{"freq", "frequency", "Set core frequency", 1, do_freq},
-	{"titan", "core num_threads nonce_bottom nonce_top", "Setup Titan core", 4, do_titan_setup},
+	{"titan", "core num_threads N nonce_bottom nonce_top", "Setup Titan core", 5, do_titan_setup},
 	{"raw", "response_length request_data", "Send raw ASIC request", 2, do_raw},
 	{NULL, NULL, NULL, 0, NULL}
 };

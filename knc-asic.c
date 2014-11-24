@@ -661,7 +661,7 @@ int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_inf
 	return knc_detect_die_(LOG_DEBUG, ctx, channel, die, die_info);
 }
 
-bool fill_in_thread_params(int num_threads, struct titan_setup_core_params *params)
+bool fill_in_thread_Nfactor_params(int num_threads, uint32_t Nfactor, struct titan_setup_core_params *params)
 {
 	struct thread_params_t {
 		uint8_t thread_enable;
@@ -717,6 +717,21 @@ bool fill_in_thread_params(int num_threads, struct titan_setup_core_params *para
 	for (i = 0; i < KNC_TITAN_THREADS_PER_CORE; ++i) {
 		params->thread_base_address[i] = thread_params[num_threads].thread_base_address[i];
 		params->lookup_gap_mask[i] = thread_params[num_threads].lookup_gap_mask[i];
+	}
+
+	if ((KNC_MIN_SCRYPT_NFACTOR > Nfactor) || (KNC_MAX_SCRYPT_NFACTOR < Nfactor)) {
+		applog(LOG_ERR, "Scrypt Nfactor must be between %d and %d!", KNC_MIN_SCRYPT_NFACTOR, KNC_MAX_SCRYPT_NFACTOR);
+		return false;
+	}
+
+	Nfactor -= KNC_MIN_SCRYPT_NFACTOR;
+
+	for (i = 0; i < KNC_TITAN_THREADS_PER_CORE; ++i) {
+		params->N_mask[i] = (1 << Nfactor) - 1;
+		params->N_shift[i] = Nfactor;
+
+		params->lookup_gap_mask[i] <<= params->N_shift[i];
+		params->lookup_gap_mask[i] |= params->N_mask[i];
 	}
 
 	return true;
