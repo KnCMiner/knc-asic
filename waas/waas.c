@@ -58,8 +58,13 @@
 #define	DEFAULT_CONFIG_FILE	"/config/advanced.conf"
 #define	WAAS_CURRENT_FREQ	"/var/run/.waas_curfreq"
 #define	WAAS_AUTOPLL_TIMESTAMP	"/var/run/.waas_t1"
+#ifdef CONTROLLER_BOARD_RPI
+#define	EXPECTED_PERFORMANCE_FILE	"/var/run/expected_performance"
+#define	REVISION_FILE			"/var/run/revision"
+#else
 #define	EXPECTED_PERFORMANCE_FILE	"/etc/expected_performance"
 #define	REVISION_FILE			"/etc/revision"
+#endif
 
 /* Factory-programmed VOUT value, 0.85 V */
 #define	ERICSON_FACTORY_VOUT_VALUE	0x1b33

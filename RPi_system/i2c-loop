@@ -11,7 +11,7 @@ while true ; do
   sleep 10
 
   /usr/bin/waas -g all-asic-info >$WAAS_ASIC_INFO_TMP 2>/dev/null
-  cat /etc/revision >> $WAAS_ASIC_INFO_TMP 2>/dev/null
+  cat /var/run/revision >> $WAAS_ASIC_INFO_TMP 2>/dev/null
   cat $WAAS_CACHE >> $WAAS_ASIC_INFO_TMP 2>/dev/null
   /usr/bin/asic_data_cache.awk $WAAS_ASIC_INFO_TMP >$WAAS_CACHE_TMP 2>/dev/null
   # now atomically move file

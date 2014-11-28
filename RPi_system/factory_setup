@@ -34,7 +34,7 @@ show_system()
 
 show_system
 
-. /etc/revision
+. /var/run/revision
 SERIAL_BB=`ip link show eth0 | awk '/ether/{gsub(":",""); print $2}'`
 SERIAL_IO=`knc-serial -i`
 SERIAL0=`knc-serial -a0`
