@@ -125,6 +125,7 @@ int knc_syncronous_transfer_fpga(void *ctx, int request_length, const uint8_t *r
 
 /* Detect ASIC DIE version */
 int knc_detect_die(void *ctx, int channel, int die, struct knc_die_info *die_info);
+int knc_detect_die_(int log_level, void *ctx, int channel, int die, struct knc_die_info *die_info);
 char * get_asicname_from_version(enum asic_version version);
 
 /* Controller channel status */
