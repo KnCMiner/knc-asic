@@ -674,8 +674,8 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 			if ((tmp > 0) && (tmp <= KNC_MAX_DIES_PER_ASIC))
 				die = tmp - 1;
 		}
-		if (die >= 0 && dev->boards[asic_v].enabled) {
-			if (asic_v >= 0) {
+		if (die >= 0) {
+			if ((asic_v >= 0) && dev->boards[asic_v].enabled) {
 				float vf = -1000.0;
 				if (1 == sscanf(&chunk.memory[tokens[i].start],
 						"%f", &vf)) {
@@ -685,7 +685,7 @@ static int parse_config_file(char *file_name, struct advanced_config * cfg, stru
 				}
 				if (vf <= -500.0)
 					cfg->dcdc_V_offset[asic_v][die] = default_dcdc_vout_trim(&dev->boards[asic_v]);
-			} else if (asic_f >= 0) {
+			} else if ((asic_f >= 0) && (dev->boards[asic_f].enabled)) {
 				int asic_fr = -1;
 				if (1 == sscanf(&chunk.memory[tokens[i].start],
 								"%d", &asic_fr)) {
