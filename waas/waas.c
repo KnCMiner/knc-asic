@@ -393,10 +393,14 @@ static int do_print_running_info(FILE *f, struct device_t *dev, int start_asic, 
 				die_freq[die] = read_die_freq(asic, die);
 			i2c_bus = i2c_connect(FIRST_ASIC_I2C_BUS + asic);
 			for (die = start_die; die <= end_die; ++die) {
+				bool freq_valid = true;
 				int data = die_freq[die];
 				if ((data < dev->freq_start[asic]) || (data > dev->freq_end[asic]))
-					data = dev->freq_default[asic];
-				fprintf(f, "\t\"die%d_Freq\": \"%d\",\n", die, data);
+					freq_valid = false;
+				if (freq_valid)
+					fprintf(f, "\t\"die%d_Freq\": \"%d\",\n", die, data);
+				else
+					fprintf(f, "\t\"die%d_Freq\": \"OFF\",\n", die);
 
 				bool voffset_valid = false;
 				if (0 <= i2c_bus) {
