@@ -67,9 +67,9 @@
 #define	DEFAULT_SPI_VOLTAGE		TPS65217_DEFDCDC_VALUE_1_8V
 
 bool test_tps65217(int i2c_bus);
-bool configure_tps65217(int i2c_bus);
+bool configure_tps65217(int i2c_bus, bool titan_voltage_fix);
 bool power_down_spi_connector(int i2c_bus);
-bool power_up_spi_connector(int i2c_bus);
+bool power_up_spi_connector(int i2c_bus, bool titan_voltage_fix);
 bool tps65217_set_digital_SPI_voltage(int i2c_bus, int voltage);
 int tps65217_get_digital_SPI_voltage(int i2c_bus);
 uint8_t tps65217_nearest_valid_spi_voltage(float user_voltage);

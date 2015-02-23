@@ -19,6 +19,7 @@
 static int opt_verbose = 0;
 static int opt_bitbang = 0;
 static int opt_attempts = 3;
+static int opt_titan_voltage_fix = 0;
 
 static void print_usage(const char *prog)
 {
@@ -27,6 +28,7 @@ static void print_usage(const char *prog)
 	     "  -b --bitbang  Use bitbang GPIO for I2C\n"
 	     "  -a --attempts Use so many initializing attempts.\n"
 	     "                  (< 0) => infinity. Default is 3.\n"
+	     "     --titan-voltage-fix\n"
 	     "  init          Initialize I/O power\n"
 	);
 	exit(1);
@@ -39,6 +41,7 @@ static void parse_opts(int argc, char *argv[])
 			{ "bitbang",  0, 0, 'b' },
 			{ "verbose",  0, 0, 'v' },
 			{ "attempts",  1, 0, 'a' },
+			{ "titan-voltage-fix",  0, 0, 1000 },
 			{ NULL, 0, 0, 0 },
 		};
 		int c;
@@ -62,6 +65,9 @@ static void parse_opts(int argc, char *argv[])
 			printf("Invalid number of attempts: %s\n", optarg);
 			print_usage(argv[0]);
 			break;
+		case 1000:
+			opt_titan_voltage_fix = 1;
+			break;
 		default:
 			print_usage(argv[0]);
 			break;
@@ -78,6 +84,10 @@ static int io_pwr_init(void)
 		i2c_set_slave_device_addr(i2c_bus, TPS65217_BUS_ADDRESS);
 	}
 
+	if (opt_titan_voltage_fix) {
+		if (opt_verbose) fprintf(stderr, "Titan voltage fix enabled!\n");
+	}
+
 	if (opt_verbose) fprintf(stderr, "Testing TPS65217\n");
 	if(!test_tps65217(i2c_bus)) {
 		fprintf(stderr, "TPS65217 TEST failure\n");
@@ -89,7 +99,7 @@ static int io_pwr_init(void)
 	bool success = false;
 	for (try = 1; (try <= opt_attempts) || (opt_attempts < 0); ++try) {
 		if (opt_verbose) fprintf(stderr, "Configuring TPS65217 try %d\n", try);
-		if (configure_tps65217(i2c_bus)) {
+		if (configure_tps65217(i2c_bus, opt_titan_voltage_fix)) {
 			success = true;
 			break;
 		}

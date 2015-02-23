@@ -138,7 +138,7 @@ static bool pwren_dcdc(int i2c_bus, bool on)
 	return (cnt == exp_cnt);
 }
 
-bool configure_tps65217(int i2c_bus)
+bool configure_tps65217(int i2c_bus, bool titan_voltage_fix)
 {
 	struct timeval start, end, runtime;
 	int prev_policy;
@@ -177,8 +177,9 @@ bool configure_tps65217(int i2c_bus)
 		return false;
 
 	/* Configure the device */
+	uint8_t spi_voltage_value = titan_voltage_fix ? tps65217_nearest_valid_spi_voltage(2.5) : DEFAULT_SPI_VOLTAGE;
 	tps65217_write_level2_reg(i2c_bus, TPS65217_DEFDCDC1,
-				  DEFAULT_SPI_VOLTAGE);
+				  spi_voltage_value);
 	tps65217_write_level2_reg(i2c_bus, TPS65217_DEFDCDC2,
 				  TPS65217_DEFDCDC_VALUE_3_3V);
 	tps65217_write_level2_reg(i2c_bus, TPS65217_DEFDCDC3,
@@ -202,7 +203,7 @@ bool configure_tps65217(int i2c_bus)
 
 	/* Check the configuration */
 	data = I2C_read_byte_data(i2c_bus, TPS65217_DEFDCDC1);
-	if ((data ^ DEFAULT_SPI_VOLTAGE) & 0xBF) {
+	if ((data ^ spi_voltage_value) & 0xBF) {
 		fprintf(stderr, "Wrong DEFDCDC1 value 0x%02X\n", data);
 		return false;		
 	}
@@ -294,12 +295,13 @@ bool configure_tps65217(int i2c_bus)
 		return false;	
 	}
 
-	if (!power_up_spi_connector(i2c_bus))
+	if (!power_up_spi_connector(i2c_bus, titan_voltage_fix))
 		return false;
 	
 	/* Wait for the POWER GOOD indication */
+	int expected_pgood = titan_voltage_fix ? 0x3F : 0x7F;
 	cnt = 0;
-	while (0x7F != (0x7F & I2C_read_byte_data(i2c_bus, TPS65217_PGOOD))) {
+	while (expected_pgood != (0x7F & I2C_read_byte_data(i2c_bus, TPS65217_PGOOD))) {
 		if (0 == usleep(1000)) /* if not interrupted by signal */
 			++cnt;
 		if (cnt > 100) {
@@ -419,27 +421,29 @@ bool power_down_spi_connector(int i2c_bus)
 	return true;
 }
 
-bool power_up_spi_connector(int i2c_bus)
+bool power_up_spi_connector(int i2c_bus, bool titan_voltage_fix)
 {
 	int data, read_data;
 
-	/* Enable LDO3 = 3V3 */
-	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
-	if (0 > read_data) {
-		fprintf(stderr, "Can not read ENABLE register\n");
-		return false;		
-	}
+	if (!titan_voltage_fix) {
+		/* Enable LDO3 = 3V3 */
+		read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
+		if (0 > read_data) {
+			fprintf(stderr, "Can not read ENABLE register\n");
+			return false;
+		}
 
-	data = read_data | TPS65217_ENABLE_LDO3;
-	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
-	
-	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
-	if ((data ^ read_data) & 0x7F) {
-		fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
-		return false;		
-	}
+		data = read_data | TPS65217_ENABLE_LDO3;
+		tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 
-	usleep(100000);
+		read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
+		if ((data ^ read_data) & 0x7F) {
+			fprintf(stderr, "Wrong ENABLE value 0x%02X\n", read_data);
+			return false;
+		}
+
+		usleep(100000);
+	}
 
 	/* Enable DCDC1 = 1V8 */
 	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
@@ -448,7 +452,9 @@ bool power_up_spi_connector(int i2c_bus)
 		return false;		
 	}
 
-	data = read_data | (TPS65217_ENABLE_DCDC1 | TPS65217_ENABLE_LDO3);
+	data = read_data | TPS65217_ENABLE_DCDC1;
+	if (!titan_voltage_fix)
+		data |= TPS65217_ENABLE_LDO3;
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
 	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
@@ -466,8 +472,9 @@ bool power_up_spi_connector(int i2c_bus)
 		return false;		
 	}
 
-	data = read_data | (TPS65217_ENABLE_DCDC1 | TPS65217_ENABLE_LDO3 |
-			    TPS65217_ENABLE_LDO4);
+	data = read_data | (TPS65217_ENABLE_DCDC1 | TPS65217_ENABLE_LDO4);
+	if (!titan_voltage_fix)
+		data |= TPS65217_ENABLE_LDO3;
 	tps65217_write_level1_reg(i2c_bus, TPS65217_ENABLE, data);
 	
 	read_data = I2C_read_byte_data(i2c_bus, TPS65217_ENABLE);
