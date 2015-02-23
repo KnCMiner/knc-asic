@@ -53,18 +53,33 @@ chmod a+rw /sys/class/gpio/*/value
 
 cd ..
 
-# Enable IO-board power
-io-pwr init
+# Enable IO-board power (with voltage fix)
+io-pwr -v --titan-voltage-fix init
 if [ "$?" = "0" ]; then
-  # Turn ON LED-2
-  echo low > /sys/class/gpio/gpio27/direction
+	# Turn ON LED-2
+	echo low > /sys/class/gpio/gpio27/direction
 fi
 
 # Program FPGA
 program-fpga /etc/spimux.rbf
 if [ "$?" = "0" ]; then
-  # Turn ON LED-3
-  echo low > /sys/class/gpio/gpio22/direction
+	# Turn ON LED-3
+	echo low > /sys/class/gpio/gpio22/direction
+fi
+
+# If voltage fix might help - leave power config as it is.
+# Otherwise re-init power in normal mode
+fix_might_help=
+for asic in 0 1 2 3 4 5; do
+	if knc-serial -a $asic >/dev/null 2>&1 ; then
+		fix_might_help=1
+		break
+	fi
+done
+if [ ! $fix_might_help ] ; then
+	# Enable IO-board power (without voltage fix, normal mode)
+	io-pwr -v init
+	program-fpga /etc/spimux.rbf
 fi
 
 knc-led 0 1 0
