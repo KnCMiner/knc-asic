@@ -71,7 +71,7 @@ fi
 # Otherwise re-init power in normal mode
 fix_might_help=
 for asic in 0 1 2 3 4 5; do
-	if knc-serial -a $asic >/dev/null 2>&1 ; then
+	if i2cget -y $((asic+2)) 0x48 0 >/dev/null 2>&1 ; then
 		fix_might_help=1
 		break
 	fi
