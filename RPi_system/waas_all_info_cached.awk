@@ -34,33 +34,40 @@ END {
   for (asic = 0; asic < NUM_ASIC; ++asic) {
     num = asic + 1;
     printf("\"asic_%d\": {\n", num);
+    all_dcdc_bad = 1;
 
     for (dcdc = 0; dcdc < NUM_DCDC; ++dcdc) {
       vout = "";
       if ("" != asic_dcdcVout[asic, dcdc])
         vout = (0.0 + asic_dcdcVout[asic, dcdc]);
-      if (vout <= 0)
+      if (vout <= 0) {
         vout_s = "";
-      else
+      } else {
         vout_s = sprintf("%.4f", vout);
+        all_dcdc_bad = 0;
+      }
       print "\t\"dcdc" dcdc "_Vout\": \"" vout_s "\","
 
       iout = "";
       if ("" != asic_dcdcIout[asic, dcdc])
         iout = (0.0 + asic_dcdcIout[asic, dcdc]);
-      if (iout <= 0)
+      if (iout <= 0) {
         iout_s = "";
-      else
+      } else {
         iout_s = sprintf("%.4f", iout);
+        all_dcdc_bad = 0;
+      }
       print "\t\"dcdc" dcdc "_Iout\": \"" iout_s "\","
 
       temp = "";
       if ("" != asic_dcdctemp[asic, dcdc])
         temp = (0.0 + asic_dcdctemp[asic, dcdc]);
-      if (temp <= 0)
+      if (temp <= 0) {
         temp_s = "";
-      else
+      } else {
         temp_s = sprintf("%.1f", temp);
+        all_dcdc_bad = 0;
+      }
       print "\t\"dcdc" dcdc "_Temp\": \"" temp_s "\","
     }
 
@@ -69,6 +76,8 @@ END {
       if ("" != asic_freq[asic, die])
         freq = (0 + asic_freq[asic, die]);
       if (freq <= 0)
+        freq = "OFF";
+      if (all_dcdc_bad)
         freq = "";
       print "\t\"die" die "_Freq\": \"" freq "\",";
 
@@ -79,6 +88,8 @@ END {
         volt_s = "";
       else
         volt_s = sprintf("%.4f", volt);
+      if (all_dcdc_bad)
+        volt_s = "";
       print "\t\"die" die "_Voffset\": \"" volt_s "\",";
     }
 
