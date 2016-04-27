@@ -328,7 +328,6 @@ static int do_print_running_info(FILE *f, struct device_t *dev, int start_asic, 
 {
 	int asic, die, dcdc;
 	int i2c_bus;
-	int id;
 	int16_t temp_s;
 	float temp, vout, iout;
 	bool dcdc_present;
@@ -378,11 +377,14 @@ static int do_print_running_info(FILE *f, struct device_t *dev, int start_asic, 
 			}
 		}
 		i2c_set_slave_device_addr(i2c_bus, 0x48);
-		id = i2c_smbus_read_byte_data(i2c_bus, LM75_ID);
-		if (LM75_ID_HIGH_NIBBLE == (id & 0xF0)) {
-			temp_s = i2c_smbus_read_word_data_bswap(i2c_bus,
-							LM75_TEMPERATURE);
-			temp = LM75_TEMP_FROM_INT(temp_s);
+		/* Some sensors does not have ID register. Let's check if we can read HYST and OS instead. */
+		if (0 <= i2c_smbus_read_word_data(i2c_bus, LM75_THYST)) {
+			if (0 <= i2c_smbus_read_word_data(i2c_bus, LM75_TOS)) {
+				temp_s = i2c_smbus_read_word_data_bswap(i2c_bus, LM75_TEMPERATURE);
+				temp = LM75_TEMP_FROM_INT(temp_s);
+			} else {
+				temp = -1000.0;
+			}
 		} else {
 			temp = -1000.0;
 		}
